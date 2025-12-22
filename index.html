@@ -6,7 +6,7 @@
     <title>evoMoyenne - Calculateur de Moyenne</title>
     
     <!-- Favicon (dynamique via JS) -->
-    <link rel="icon" type="image/png" href="logo-n.png" id="favicon">
+    <link rel="icon" type="image/png" href="assets/logos/logo-n.png" id="favicon">
     
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,8 +63,6 @@
             --text-muted: #94a3b8;
             --border-color: #e2e8f0;
             --hover-bg: #f1f5f9;
-            --snow-color: rgba(255, 255, 255, 0.9);
-            --snow-shadow: rgba(0, 0, 0, 0.1);
         }
         
         /* ===== THÈME SOMBRE ===== */
@@ -77,8 +75,6 @@
             --text-muted: #64748b;
             --border-color: #334155;
             --hover-bg: #334155;
-            --snow-color: rgba(255, 255, 255, 0.95);
-            --snow-shadow: rgba(255, 255, 255, 0.3);
         }
         
         @media (prefers-color-scheme: dark) {
@@ -91,8 +87,6 @@
                 --text-muted: #64748b;
                 --border-color: #334155;
                 --hover-bg: #334155;
-                --snow-color: rgba(255, 255, 255, 0.95);
-                --snow-shadow: rgba(255, 255, 255, 0.3);
             }
         }
         
@@ -312,16 +306,6 @@
         .toggle-btn:hover .toggle-btn-tooltip {
             opacity: 1;
             visibility: visible;
-        }
-        
-        /* Snow button active state */
-        .toggle-btn.snow-active {
-            border-color: var(--color-blue);
-            background: var(--color-blue-light);
-        }
-        
-        .toggle-btn.snow-active .toggle-icon {
-            animation: pulse 2s ease infinite;
         }
         
         /* ===== MOYENNE CARD ===== */
@@ -997,15 +981,61 @@
             border-top: 1px solid var(--border-color);
         }
         
+        .footer-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
         .footer-version {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             background: var(--bg-tertiary);
             padding: 3px 10px;
             border-radius: 50px;
             font-size: 0.75rem;
             font-weight: 600;
-            margin-left: 8px;
             color: var(--text-secondary);
+        }
+        
+        .footer-github {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            transition: all var(--transition-fast);
+        }
+        
+        .footer-github:hover {
+            background: var(--hover-bg);
+            transform: scale(1.1);
+        }
+        
+        .footer-github img {
+            width: 18px;
+            height: 18px;
+            opacity: 0.7;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .footer-github:hover img {
+            opacity: 1;
+        }
+        
+        /* Invert GitHub logo in dark mode */
+        [data-theme="dark"] .footer-github img {
+            filter: invert(1);
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            [data-theme="auto"] .footer-github img {
+                filter: invert(1);
+            }
         }
         
         /* ===== TOAST ===== */
@@ -1078,9 +1108,9 @@
         <header>
             <div class="logo">
                 <div class="logo-icon" id="logoIcon" title="Double-cliquez pour une surprise 🎵">
-                    <img src="logo-n.png" alt="evoMoyenne" class="logo-light">
-                    <img src="logo-b.png" alt="evoMoyenne" class="logo-dark">
-                    <img src="67-kid.png" alt="67" class="logo-easter">
+                    <img src="assets/logos/logo-n.png" alt="evoMoyenne" class="logo-light">
+                    <img src="assets/logos/logo-b.png" alt="evoMoyenne" class="logo-dark">
+                    <img src="assets/easter-eggs/67-kid.png" alt="67" class="logo-easter">
                 </div>
                 <h1>evoMoyenne</h1>
             </div>
@@ -1157,7 +1187,7 @@
             
             <button class="action-btn action-btn-ecole" id="btnEcoleDirecte">
                 <div class="action-btn-icon">
-                    <img src="logo-ed.png" alt="EcoleDirecte">
+                    <img src="assets/logos/logo-ed.png" alt="EcoleDirecte">
                 </div>
                 <div class="action-btn-content">
                     <h3>EcoleDirecte</h3>
@@ -1176,7 +1206,13 @@
         
         <!-- Footer -->
         <footer>
-            <p>Créé avec 🧋 et 🍫 par <strong>evo</strong> <span class="footer-version">V2.0</span></p>
+            <div class="footer-content">
+                <span>Créé avec 🧋 et 🍫 par <strong>evo</strong></span>
+                <span class="footer-version">V0.2.1</span>
+                <a href="https://github.com/adouche-design/evomoyenne" target="_blank" rel="noopener noreferrer" class="footer-github" title="Voir sur GitHub">
+                    <img src="assets/logos/logo-github.png" alt="GitHub">
+                </a>
+            </div>
         </footer>
     </div>
     
@@ -1303,9 +1339,9 @@
         
         const updateFavicon = () => {
             if (isEasterEggActive) {
-                favicon.href = '67-kid.png';
+                favicon.href = 'assets/easter-eggs/67-kid.png';
             } else {
-                favicon.href = getEffectiveTheme() === 'dark' ? 'logo-b.png' : 'logo-n.png';
+                favicon.href = getEffectiveTheme() === 'dark' ? 'assets/logos/logo-b.png' : 'assets/logos/logo-n.png';
             }
         };
         
@@ -1395,9 +1431,11 @@
                 snowCtx.arc(flake.x, flake.y, flake.size, 0, Math.PI * 2);
                 
                 if (isDark) {
+                    // Mode sombre : flocons blancs
                     snowCtx.fillStyle = `rgba(255, 255, 255, ${flake.opacity})`;
                 } else {
-                    snowCtx.fillStyle = `rgba(255, 255, 255, ${flake.opacity})`;
+                    // Mode clair : flocons gris bleutés pour meilleure visibilité
+                    snowCtx.fillStyle = `rgba(100, 116, 139, ${flake.opacity * 0.6})`;
                     snowCtx.shadowColor = 'rgba(0, 0, 0, 0.1)';
                     snowCtx.shadowBlur = 2;
                 }
@@ -1433,12 +1471,10 @@
             localStorage.setItem('evoMoyenne_snow', isSnowEnabled ? 'on' : 'off');
             
             if (isSnowEnabled) {
-                snowToggle.classList.add('snow-active');
                 snowTooltip.textContent = 'Neige: ON';
                 createSnowflakes();
                 startSnowAnimation();
             } else {
-                snowToggle.classList.remove('snow-active');
                 snowTooltip.textContent = 'Neige: OFF';
                 stopSnowAnimation();
             }
@@ -1448,13 +1484,7 @@
             const saved = localStorage.getItem('evoMoyenne_snow');
             isSnowEnabled = saved !== 'off';
             
-            if (isSnowEnabled) {
-                snowToggle.classList.add('snow-active');
-                snowTooltip.textContent = 'Neige: ON';
-            } else {
-                snowToggle.classList.remove('snow-active');
-                snowTooltip.textContent = 'Neige: OFF';
-            }
+            snowTooltip.textContent = isSnowEnabled ? 'Neige: ON' : 'Neige: OFF';
         }
         
         snowToggle.addEventListener('click', toggleSnow);
@@ -1469,7 +1499,7 @@
         // ===== AUDIO PLAYER (Easter Egg) =====
         function initAudioPlayer() {
             if (!audio) {
-                audio = new Audio('algorithme-des-notes.mp3');
+                audio = new Audio('assets/easter-eggs/algorithme-des-notes.mp3');
                 
                 audio.addEventListener('timeupdate', () => {
                     if (audio.duration) {
