@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>evoMoyenne</title>
+    <title>evoMoyenne - Calculateur de Moyenne</title>
     
     <!-- Favicon (dynamique via JS) -->
     <link rel="icon" type="image/png" href="assets/logos/logo-n.png" id="favicon">
@@ -158,15 +158,12 @@
             min-height: 100vh;
             transition: background-color var(--transition-normal), color var(--transition-normal);
             line-height: 1.6;
-            position: relative;
         }
         
         .container {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            position: relative;
-            z-index: 1;
         }
         
         /* ===== HEADER ===== */
@@ -240,14 +237,8 @@
             color: transparent;
         }
         
-        /* ===== HEADER CONTROLS ===== */
-        .header-controls {
-            display: flex;
-            gap: 10px;
-        }
-        
-        /* ===== TOGGLE BUTTONS (Theme & Snow) ===== */
-        .toggle-btn {
+        /* ===== THEME TOGGLE ===== */
+        .theme-toggle {
             width: 44px;
             height: 44px;
             border: 2px solid var(--border-color);
@@ -262,18 +253,18 @@
             position: relative;
         }
         
-        .toggle-btn:hover {
+        .theme-toggle:hover {
             border-color: var(--accent-color);
             background: var(--hover-bg);
             transform: scale(1.05);
         }
         
-        .toggle-btn:active { transform: scale(0.95); }
+        .theme-toggle:active { transform: scale(0.95); }
         
-        .toggle-btn .toggle-icon { transition: transform var(--transition-fast); }
-        .toggle-btn:hover .toggle-icon { transform: rotate(20deg); }
+        .theme-toggle .theme-icon { transition: transform var(--transition-fast); }
+        .theme-toggle:hover .theme-icon { transform: rotate(20deg); }
         
-        .toggle-btn-tooltip {
+        .theme-toggle-tooltip {
             position: absolute;
             bottom: -35px;
             left: 50%;
@@ -289,10 +280,9 @@
             visibility: hidden;
             transition: all var(--transition-fast);
             pointer-events: none;
-            z-index: 10;
         }
         
-        .toggle-btn:hover .toggle-btn-tooltip {
+        .theme-toggle:hover .theme-toggle-tooltip {
             opacity: 1;
             visibility: visible;
         }
@@ -970,26 +960,18 @@
             border-top: 1px solid var(--border-color);
         }
         
-        .footer-content {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
         .footer-version {
-            display: inline-flex;
-            align-items: center;
+            display: inline-block;
             background: var(--bg-tertiary);
             padding: 3px 10px;
             border-radius: 50px;
             font-size: 0.75rem;
             font-weight: 600;
+            margin-left: 8px;
             color: var(--text-secondary);
         }
         
-        .footer-github {
+		.footer-github {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1026,7 +1008,7 @@
                 filter: invert(1);
             }
         }
-        
+		
         /* ===== TOAST ===== */
         .toast {
             position: fixed;
@@ -1053,6 +1035,8 @@
             transform: translateX(-50%) translateY(0);
         }
         
+        /* Adjust toast position when player is visible */
+        .audio-player.active ~ .toast.show,
         body:has(.audio-player.active) .toast.show {
             bottom: 140px;
         }
@@ -1075,21 +1059,10 @@
                 width: calc(100% - 20px);
                 padding: 15px 20px;
             }
-            
-            .header-controls {
-                gap: 8px;
-            }
-            
-            .toggle-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1.1rem;
-            }
         }
     </style>
 </head>
 <body>
-    
     <div class="container">
         <!-- Header -->
         <header>
@@ -1101,15 +1074,10 @@
                 </div>
                 <h1>evoMoyenne</h1>
             </div>
-            
-            <div class="header-controls">
-                
-                <!-- Theme Toggle -->
-                <button class="toggle-btn" id="themeToggle" title="Changer de thème">
-                    <span class="toggle-icon" id="themeIcon">💻</span>
-                    <span class="toggle-btn-tooltip" id="themeTooltip">Auto</span>
-                </button>
-            </div>
+            <button class="theme-toggle" id="themeToggle" title="Changer de thème">
+                <span class="theme-icon" id="themeIcon">💻</span>
+                <span class="theme-toggle-tooltip" id="themeTooltip">Auto</span>
+            </button>
         </header>
         
         <!-- Moyenne Display -->
@@ -1233,6 +1201,7 @@
             <div class="audio-player-icon" id="audioPlayerIcon">🎵</div>
             <div class="audio-player-info">
                 <div class="audio-player-title">L'Algorithme des Notes</div>
+                <div class="audio-player-subtitle">adouche-design</div>
             </div>
             <button class="audio-player-close" id="audioPlayerClose" title="Fermer">✕</button>
         </div>
@@ -1256,7 +1225,7 @@
         <div class="share-card-moyenne" id="shareCardMoyenne">--</div>
         <div class="share-card-sur">/20</div>
         <div class="share-card-status" id="shareCardStatus">Ma moyenne</div>
-        <div class="share-card-footer">Calculé avec evoMoyenne.qzz.io</div>
+        <div class="share-card-footer">Calculé avec evoMoyenne</div>
     </div>
     
     <!-- Toast -->
@@ -1267,7 +1236,6 @@
         let notes = [];
         let currentTheme = 'auto';
         let isEasterEggActive = false;
-        let isSnowEnabled = true;
         
         const themeCycle = ['light', 'dark', 'auto'];
         const themeIcons = { light: '☀️', dark: '🌙', auto: '💻' };
@@ -1278,12 +1246,6 @@
         let audio = null;
         let isAudioPlayerVisible = false;
         let isPlaying = false;
-        
-        // ===== SNOW STATE =====
-        let snowflakes = [];
-        let snowAnimationId = null;
-        const snowCanvas = document.getElementById('snowCanvas');
-        const snowCtx = snowCanvas.getContext('2d');
         
         // ===== DOM =====
         const html = document.documentElement;
@@ -1299,8 +1261,6 @@
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const themeTooltip = document.getElementById('themeTooltip');
-        const snowToggle = document.getElementById('snowToggle');
-        const snowTooltip = document.getElementById('snowTooltip');
         const toast = document.getElementById('toast');
         
         // Audio Player DOM
@@ -1320,12 +1280,13 @@
         
         const updateFavicon = () => {
             if (isEasterEggActive) {
-                favicon.href = 'assets/easter-eggs/67-kid.png';
+                favicon.href = '67-kid.png';
             } else {
-                favicon.href = getEffectiveTheme() === 'dark' ? 'assets/logos/logo-b.png' : 'assets/logos/logo-n.png';
+                favicon.href = getEffectiveTheme() === 'dark' ? 'logo-b.png' : 'logo-n.png';
             }
         };
         
+        // Format time (seconds to M:SS)
         const formatTime = (seconds) => {
             if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
             const mins = Math.floor(seconds / 60);
@@ -1338,6 +1299,7 @@
             if (!audio) {
                 audio = new Audio('assets/easter-eggs/algorithme-des-notes.mp3');
                 
+                // Update progress bar
                 audio.addEventListener('timeupdate', () => {
                     if (audio.duration) {
                         const progress = (audio.currentTime / audio.duration) * 100;
@@ -1346,10 +1308,12 @@
                     }
                 });
                 
+                // When audio is loaded
                 audio.addEventListener('loadedmetadata', () => {
                     audioPlayerDuration.textContent = formatTime(audio.duration);
                 });
                 
+                // When audio ends
                 audio.addEventListener('ended', () => {
                     isPlaying = false;
                     audioPlayerPlayPause.textContent = '▶️';
@@ -1358,6 +1322,7 @@
                     audio.currentTime = 0;
                 });
                 
+                // Handle errors
                 audio.addEventListener('error', () => {
                     showToast('Impossible de charger la musique', 'error');
                     hideAudioPlayer();
@@ -1371,6 +1336,7 @@
             audioPlayer.classList.add('active');
             isAudioPlayerVisible = true;
             
+            // Start playing
             audio.play().then(() => {
                 isPlaying = true;
                 audioPlayerPlayPause.textContent = '⏸️';
@@ -1427,6 +1393,7 @@
             audio.currentTime = seekTime;
         }
         
+        // Double-click on logo to show player
         logoIcon.addEventListener('dblclick', (e) => {
             e.preventDefault();
             
@@ -1437,6 +1404,7 @@
             }
         });
         
+        // Audio player controls
         audioPlayerClose.addEventListener('click', hideAudioPlayer);
         audioPlayerPlayPause.addEventListener('click', togglePlayPause);
         audioPlayerBar.addEventListener('click', seekAudio);
@@ -1665,9 +1633,7 @@
         
         // ===== INIT =====
         setTheme(localStorage.getItem('evoMoyenne_theme') || 'auto');
-        loadSnowPreference();
         loadNotes();
-        initSnow();
     </script>
 </body>
 </html>
