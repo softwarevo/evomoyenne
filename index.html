@@ -129,35 +129,35 @@
     <!-- Modals, Audio Player, Share Card, Toast -->
 
     <div class="modal-overlay" id="modalEcoleDirecte">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Se connecter à EcoleDirecte</h3>
-                <button class="modal-close" onclick="closeModal('modalEcoleDirecte')">✕</button>
-            </div>
-            <div class="modal-body">
-                <p>🏗️ C'est en construction ici !</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closeModal('modalEcoleDirecte')">D'accord</button>
-            </div>
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Se connecter à EcoleDirecte</h3>
+            <button class="modal-close" onclick="closeModal('modalEcoleDirecte')">✕</button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <p>🏗️ C'est en construction ici !</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeModal('modalEcoleDirecte')" style="width: 100%;">Bon, je pars...</button>
         </div>
     </div>
+</div>
 
     <div class="modal-overlay" id="modalClear">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Tout effacer ?</h3>
-                <button class="modal-close" onclick="closeModal('modalClear')">✕</button>
-            </div>
-            <div class="modal-body">
-                <p>Êtes-vous sûr de vouloir supprimer toutes vos notes ?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn" onclick="closeModal('modalClear')">Non, surtout pas !</button>
-                <button class="btn btn-danger" id="confirmClear">Oui, tout supprimer</button>
-            </div>
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Tout effacer ?</h3>
+            <button class="modal-close" onclick="closeModal('modalClear')">✕</button>
+        </div>
+        <div class="modal-body">
+            <p>Êtes-vous sûr de vouloir supprimer toutes vos notes ?</p>
+        </div>
+        <div class="modal-footer" style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn" onclick="closeModal('modalClear')" style="background: #e2e8f0; color: #3b82f6; width: 100%;">Non, surtout pas !</button>
+            <button class="btn btn-danger" id="confirmClear" style="background: #ef4444; color: white; width: 100%;">Oui, tout supprimer</button>
         </div>
     </div>
+</div>
 
     <div class="audio-player" id="audioPlayer">
         <div class="audio-player-icon" id="audioPlayerIcon">🎵</div>
@@ -187,4 +187,5 @@
     <script src="assets/js/app.js"></script>
 </body>
 </html>
+
 
