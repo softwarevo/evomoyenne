@@ -365,7 +365,11 @@
             cardS.style.background = c.colorLight;
             cardS.style.color = c.colorDark;
             
-            card.style.cssText = 'left:0;top:0;position:fixed;z-index:-1';
+            card.style.position = 'fixed';
+            card.style.left = '0';
+            card.style.top = '0';
+            card.style.zIndex = '-1';
+            card.style.display = 'flex';
             
             try {
                 showToast('Préparation...', 'success');
