@@ -46,7 +46,7 @@
         
         const updateFavicon = () => {
             if (isEasterEggActive) {
-                favicon.href = '67-kid.png';
+                favicon.href = 'assets/easter-eggs/67-kid.png';
             } else {
                 favicon.href = getEffectiveTheme() === 'dark' ? 'logo-b.png' : 'logo-n.png';
             }
