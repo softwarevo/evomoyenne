@@ -1,3 +1,5 @@
+# ⚠️ evoMoyenne is currently facing serious javascript problems, the website doesn't work anymore.
+# ⚠️ evoMoyenne subit de graves problèmes de javascript, le site ne marche plus.
 # 📈 evoMoyenne
 
 > Une application web fluide pour calculer et suivre l'évolution de vos moyennes en un clin d'œil. 🚀
