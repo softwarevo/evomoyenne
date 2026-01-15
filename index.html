@@ -1366,7 +1366,7 @@
                             Objectif
                         </h2>
                         <div class="target-input-container">
-                            <input type="number" class="target-input" id="target-input" min="0" max="20" step="0.1" value="14">
+                            <input type="number" class="target-input" id="target-input" min="0" max="20" step="0.1" value="20">
                             <span>/20</span>
                         </div>
                     </div>
@@ -1418,7 +1418,7 @@
 
             <!-- Page Labo -->
             <main class="page hidden" id="page-labo">
-                <!-- Mode Toggle - Now in Labo -->
+                <!-- Mode Toggle -->
                 <div class="card mode-toggle-card">
                     <span class="mode-toggle-label">Mode de calcul</span>
                     <div class="mode-toggle-container">
@@ -1428,7 +1428,7 @@
                     </div>
                 </div>
 
-                <!-- Add Note Form - Monochrome -->
+                <!-- Add Note Form -->
                 <div class="card add-note-card">
                     <h2 class="section-title">
                         <span class="material-symbols-rounded">add_circle</span>
@@ -1610,13 +1610,13 @@
     <script>
         // ==================== DATA MANAGEMENT ====================
         const defaultSubjects = [
-            { id: 'maths', name: 'Mathématiques', coef: 4, notes: [], isDefault: true },
-            { id: 'francais', name: 'Français', coef: 4, notes: [], isDefault: true },
-            { id: 'histoire', name: 'Histoire-Géo', coef: 3, notes: [], isDefault: true },
-            { id: 'anglais', name: 'Anglais', coef: 3, notes: [], isDefault: true },
-            { id: 'physique', name: 'Physique-Chimie', coef: 3, notes: [], isDefault: true },
-            { id: 'svt', name: 'SVT', coef: 2, notes: [], isDefault: true },
-            { id: 'eps', name: 'EPS', coef: 2, notes: [], isDefault: true },
+            { id: 'maths', name: 'Mathématiques', coef: 3, notes: [], isDefault: true },
+            { id: 'francais', name: 'Français', coef: 3, notes: [], isDefault: true },
+            { id: 'histoire', name: 'Histoire-Géo', coef: 2, notes: [], isDefault: true },
+            { id: 'anglais', name: 'Anglais', coef: 2, notes: [], isDefault: true },
+            { id: 'physique', name: 'Physique-Chimie', coef: 1, notes: [], isDefault: true },
+            { id: 'svt', name: 'SVT', coef: 1, notes: [], isDefault: true },
+            { id: 'eps', name: 'EPS', coef: 1, notes: [], isDefault: true },
         ];
 
         let data = {
@@ -1662,21 +1662,31 @@
             return totalCoef > 0 ? totalWeighted / totalCoef : null;
         }
 
-        function calculateGeneralAverage(mode = 'standard', includeGhost = true) {
-            let totalWeighted = 0;
-            let totalCoef = 0;
+        function calculateGeneralAverage() {
+    let totalWeightedMoyennes = 0;
+    let totalWeights = 0;
+
+    Object.keys(data.subjects).forEach(subjectName => {
+        const subject = data.subjects[subjectName];
+        const notes = subject.notes || [];
+        
+        if (notes.length > 0) {
+            // 1. Calcul de la moyenne de la matière
+            const sum = notes.reduce((a, b) => a + b.value, 0);
+            const subjectMoyenne = sum / notes.length;
             
-            data.subjects.forEach(subject => {
-                const avg = calculateSubjectAverage(subject, includeGhost);
-                if (avg !== null) {
-                    if (mode === 'standard') {
-                        totalWeighted += avg * subject.coef;
-                        totalCoef += subject.coef;
-                    } else {
-                        totalWeighted += avg;
-                        totalCoef += 1;
-                    }
-                }
+            // 2. TON NOUVEAU CALCUL : (Coef Matière) * (Nombre de notes)
+            // On s'assure d'avoir au moins 1 si le coef est mal lu
+            const coefMatiere = subject.coef || 1;
+            const weight = coefMatiere * notes.length;
+            
+            totalWeightedMoyennes += (subjectMoyenne * weight);
+            totalWeights += weight;
+        }
+    });
+
+    return totalWeights > 0 ? (totalWeightedMoyennes / totalWeights).toFixed(2) : "0.00";
+}
             });
             
             return totalCoef > 0 ? totalWeighted / totalCoef : null;
