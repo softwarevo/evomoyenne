@@ -1,18 +1,23 @@
         // ==================== DATA MANAGEMENT ====================
         const defaultSubjects = [
-            { id: 'maths', name: 'Mathématiques', coef: 4, notes: [], isDefault: true },
-            { id: 'francais', name: 'Français', coef: 4, notes: [], isDefault: true },
-            { id: 'histoire', name: 'Histoire-Géo', coef: 3, notes: [], isDefault: true },
-            { id: 'anglais', name: 'Anglais', coef: 3, notes: [], isDefault: true },
-            { id: 'physique', name: 'Physique-Chimie', coef: 3, notes: [], isDefault: true },
-            { id: 'svt', name: 'SVT', coef: 2, notes: [], isDefault: true },
-            { id: 'eps', name: 'EPS', coef: 2, notes: [], isDefault: true },
+            { id: 'maths', name: 'Mathématiques', coef: 3, notes: [], isDefault: true },
+            { id: 'francais', name: 'Français', coef: 3, notes: [], isDefault: true },
+            { id: 'histoire', name: 'Histoire-Géo', coef: 2, notes: [], isDefault: true },
+            { id: 'anglais', name: 'Anglais', coef: 2, notes: [], isDefault: true },
+            { id: 'physique', name: 'Physique-Chimie', coef: 1, notes: [], isDefault: true },
+            { id: 'svt', name: 'SVT', coef: 1, notes: [], isDefault: true },
+            { id: 'eps', name: 'EPS', coef: 1, notes: [], isDefault: true },
+            { id: 'techno', name: 'Technologie', coef: 1, notes: [], isDefault: true },
+            { id: 'lv2', name: 'Allemand/Espagnol', coef: 2, notes: [], isDefault: true },
+            { id: 'latin', name: 'Latin', coef: 1, notes: [], isDefault: true },
+            { id: 'art', name: 'Art Plastique', coef: 1, notes: [], isDefault: true },
+            { id: 'musique', name: 'Musique', coef: 1, notes: [], isDefault: true },
         ];
 
         let data = {
             subjects: [],
             history: {},
-            target: 14,
+            target: 20,
             mode: 'standard',
             theme: 'dark'
         };
@@ -161,7 +166,7 @@
 
         function updateTargetProgress() {
             const avg = calculateGeneralAverage(data.mode);
-            const target = parseFloat(document.getElementById('target-input').value) || 14;
+            const target = parseFloat(document.getElementById('target-input').value) || 20;
             
             const progressBar = document.getElementById('target-progress');
             const progressCurrent = document.getElementById('progress-current');
