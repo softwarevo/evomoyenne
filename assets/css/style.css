@@ -152,7 +152,7 @@
             background: var(--md-sys-color-surface-container-highest);
         }
 
-        /* Pages Container - No Slide */
+        /* Pages Container */
         .pages-wrapper {
             flex: 1;
             overflow: hidden;
@@ -242,7 +242,7 @@
             box-shadow: 0 2px 8px var(--md-sys-color-shadow);
         }
 
-        /* Average Hero Card - Monochrome */
+        /* Average Hero Card */
         .average-hero {
             text-align: center;
             padding: 32px 24px;
@@ -291,7 +291,7 @@
             color: var(--md-sys-color-on-surface-variant) !important;
         }
 
-        /* Mode Toggle - Moved to Labo */
+        /* Mode Toggle */
         .mode-toggle-card {
             display: flex;
             align-items: center;
@@ -348,7 +348,7 @@
             transform: translateX(20px);
         }
 
-        /* Coming Soon Card - Monochrome */
+        /* Coming Soon Card */
         .coming-soon-card {
             position: relative;
             background: var(--md-sys-color-surface-container);
@@ -526,7 +526,7 @@
             color: var(--md-sys-color-on-surface-variant);
         }
 
-        /* LAB PAGE - Add Note Form Monochrome */
+        /* Add Note Form */
         .add-note-card {
             background: var(--md-sys-color-surface-container);
         }
@@ -625,7 +625,7 @@
         .add-btn {
             width: 100%;
             padding: 14px;
-            background: var(--md-sys-color-primary);
+            background: var(--md-sys-color-on-primary);
             color: var(--md-sys-color-on-primary);
             border: none;
             border-radius: var(--radius-md);
