@@ -58,6 +58,25 @@
             return totalCoef > 0 ? totalWeighted / totalCoef : null;
         }
 
+        function calculateGeneralAverage() {
+            let totalWeightedPoints = 0;
+            let totalWeightedCoefs = 0;
+
+            data.subjects.forEach(subject => {
+                if (subject.notes && subject.notes.length > 0) {
+                    subject.notes.forEach(note => {
+                        const noteSur20 = (note.value / note.max) * 20;
+                        const doubleCoef = note.coef * subject.coef;
+                
+                        totalWeightedPoints += noteSur20 * doubleCoef;
+                        totalWeightedCoefs += doubleCoef;
+                    });
+                }
+            });
+
+            return totalWeightedCoefs > 0 ? totalWeightedPoints / totalWeightedCoefs : null;
+        }
+
         function calculateGeneralAverage(mode = 'standard', includeGhost = true) {
             let totalWeighted = 0;
             let totalCoef = 0;
