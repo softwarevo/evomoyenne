@@ -1,6 +1,6 @@
         :root {
             /* Colors */
-            --md-sys-color-primary: #e5e5e5;
+            --md-sys-color-primary: #1a1a1a;
             --md-sys-color-on-primary: #ffffff;
             --md-sys-color-primary-container: #e0e0e0;
             --md-sys-color-on-primary-container: #1a1a1a;
@@ -23,7 +23,7 @@
             --md-sys-color-success: #2e7d32;
             --md-sys-color-shadow: rgba(0,0,0,0.15);
             
-            /* Spacing & Radius */
+            /* Radius */
             --radius-xl: 28px;
             --radius-lg: 20px;
             --radius-md: 16px;
@@ -37,10 +37,10 @@
         }
 
         [data-theme="dark"] {
-            --md-sys-color-primary: #1a1a1a;
-            --md-sys-color-on-primary: #e0e0e0;
+            --md-sys-color-primary: #e0e0e0;
+            --md-sys-color-on-primary: #1a1a1a;
             --md-sys-color-primary-container: #3a3a3a;
-            --md-sys-color-on-primary-container: #000000;
+            --md-sys-color-on-primary-container: #e0e0e0;
             --md-sys-color-surface: #121212;
             --md-sys-color-surface-dim: #0a0a0a;
             --md-sys-color-surface-bright: #1e1e1e;
@@ -763,7 +763,7 @@
             border-bottom: none;
         }
 
-        /* Ghost notes - clear visual distinction */
+        /* Ghost notes */
         .note-item.ghost {
             opacity: 0.5;
         }
@@ -1121,7 +1121,7 @@
             transform: scale(1.1);
         }
 
-        /* Generated Share Card - New Design */
+        /* Generated Share Card */
         .generated-card {
             width: 300px;
             margin: 0 auto;
