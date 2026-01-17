@@ -1,4 +1,3 @@
-# ⚠️ Ceci est un build expérimental, et peut rencontrer des bugs.
 # 📈 evoMoyenne
 
 > Une application web fluide pour calculer et suivre l'évolution de vos moyennes en un clin d'œil. 🚀
@@ -6,16 +5,16 @@
 ## ✨ Fonctionnalités
 - **Calcul instantané** : Saisissez vos notes et coefficients, l'application s'occupe du reste.
 - **Interface épurée** : Un design moderne et responsive pour une expérience utilisateur optimale.
+- **Infos détaillées** : Calcul précis, graphique d'évolution, objectif et moyennes de matières.
+- **Partage efficace** : Partagez votre moyenne en quelques secondes en 1 clic via une image ou un bulletin fictif.
 
 ## 🗺️ Roadmap
 Voici les prochaines étapes du développement :
 - [ ] **Connexion EcoleDirecte** : Import automatique de vos notes en temps réel.
-- [ ] **Gestion par matières** : Attribution automatique (ou manuelle) des coefficients selon les disciplines.
-- [ ] **Graphiques d'évolution** : Visualisation de votre progression sur l'année.
-- [ ] **Meilleur responsive** : Meilleure adaptation à tous les écrans.
+- [ ] **Appréciations** : Appréciation courte selon votre moyenne et évolution, ainsi qu'une appréciation longue générée par IA, plus précise (sur le bulletin fictif).
 
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
 
 ## ☁️ Version
-evoMoyenne est actuellement sous sa version 0.2.1.
+evoMoyenne est actuellement sous sa version 1.0.
