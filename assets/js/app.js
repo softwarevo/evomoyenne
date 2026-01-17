@@ -335,19 +335,20 @@
                     plugins: {
                         legend: { display: false }
                     },
+                   
                     scales: {
                         x: {
                             grid: { display: false },
                             ticks: { 
-                                color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-on-surface-variant').trim(),
-                                font: { family: 'Inter' }
+                                color: 'rgba(154, 154, 154, 0.8)', 
+                                font: { family: 'Inter', size: 11 }
                             }
                         },
                         y: {
                             min: 0,
                             max: 20,
                             grid: { 
-                                color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-outline-variant').trim()
+                                color: 'rgba(154, 154, 154, 0.1)'
                             },
                             ticks: { 
                                 color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-on-surface-variant').trim(),
@@ -379,7 +380,8 @@
             });
             
             const primaryColor = getComputedStyle(document.body).getPropertyValue('--md-sys-color-primary').trim();
-            evolutionChart.data.datasets[0].borderColor = primaryColor;
+            evolutionChart.data.datasets[0].borderColor = primaryColor || '#9a9a9a';
+            evolutionChart.data.datasets[0].pointBackgroundColor = primaryColor || '#9a9a9a';
             
             evolutionChart.update();
         }
