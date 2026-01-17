@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="evoMoyenne - Calculateur de moyenne EcoleDirecte">
     <title>evoMoyenne</title>
-    
-    <!-- PWA Manifest -->
+
+	<!-- Manifest PWA -->
     <link rel="manifest" href="data:application/json,{
         &quot;name&quot;: &quot;evoMoyenne&quot;,
         &quot;short_name&quot;: &quot;evoMoyenne&quot;,
@@ -18,20 +18,19 @@
         &quot;background_color&quot;: &quot;%23121212&quot;,
         &quot;theme_color&quot;: &quot;%23121212&quot;
     }">
-    
-    <!-- Google Fonts & Material Symbols -->
+
+	<!--Font and icons-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-	
-    <!-- CSS -->
+
+	<!--CSS-->
     <link rel="stylesheet" href="assets/css/style.css">
 
 </head>
 <body data-theme="dark">
     <div class="app-container">
-        <!-- Top Bar -->
         <header class="top-bar">
             <div class="logo-container">
                 <img id="logo-img" src="/assets/logos/logo-b.png" alt="Logo">
@@ -47,11 +46,8 @@
             </div>
         </header>
 
-        <!-- Pages -->
         <div class="pages-wrapper">
-            <!-- Page Accueil -->
             <main class="page" id="page-accueil">
-                <!-- Average Hero -->
                 <div class="card average-hero" id="average-hero">
                     <div class="average-label">Moyenne Générale</div>
                     <div class="average-value" id="average-value">--</div>
@@ -61,7 +57,6 @@
                     </div>
                 </div>
 
-                <!-- Coming Soon (EcoleDirecte) -->
                 <div class="card coming-soon-card">
                     <div class="coming-soon-header">
                         <span class="coming-soon-badge">
@@ -77,7 +72,6 @@
                     <p class="coming-soon-text">On travaille dur là-dessus !</p>
                 </div>
 
-                <!-- Chart -->
                 <div class="card">
                     <h2 class="section-title">
                         <span class="material-symbols-rounded">show_chart</span>
@@ -88,7 +82,6 @@
                     </div>
                 </div>
 
-                <!-- Target -->
                 <div class="card target-card">
                     <div class="target-header">
                         <h2 class="section-title" style="margin-bottom: 0;">
@@ -109,7 +102,6 @@
                     </div>
                 </div>
 
-                <!-- Top/Flop -->
                 <div class="topflop-grid">
                     <div class="card topflop-card">
                         <h3 class="topflop-title">
@@ -127,7 +119,6 @@
                     </div>
                 </div>
 
-                <!-- Export -->
                 <div class="card export-section">
                     <h2 class="section-title">
                         <span class="material-symbols-rounded">share</span>
@@ -146,19 +137,8 @@
                 </div>
             </main>
 
-            <!-- Page Labo -->
             <main class="page hidden" id="page-labo">
-                <!-- Mode Toggle -->
-                <div class="card mode-toggle-card">
-                    <span class="mode-toggle-label">Mode de calcul</span>
-                    <div class="mode-toggle-container">
-                        <span class="mode-label active" id="mode-standard-label">Standard</span>
-                        <div class="toggle-switch" id="mode-toggle"></div>
-                        <span class="mode-label" id="mode-brut-label">Brut</span>
-                    </div>
-                </div>
-
-                <!-- Add Note Form -->
+                
                 <div class="card add-note-card">
                     <h2 class="section-title">
                         <span class="material-symbols-rounded">add_circle</span>
@@ -201,7 +181,6 @@
                     </button>
                 </div>
 
-                <!-- New Subject -->
                 <div class="card">
                     <h2 class="section-title">
                         <span class="material-symbols-rounded">add_box</span>
@@ -221,7 +200,6 @@
                     </button>
                 </div>
 
-                <!-- Subjects List -->
                 <div class="subjects-header">
                     <h2 class="section-title" style="margin-bottom: 0;">
                         <span class="material-symbols-rounded">folder</span>
@@ -237,7 +215,6 @@
             </main>
         </div>
 
-        <!-- Bottom Navigation -->
         <nav class="bottom-nav">
             <button class="nav-item active" data-page="accueil">
                 <div class="nav-pill">
@@ -254,7 +231,6 @@
         </nav>
     </div>
 
-    <!-- Bottom Sheet (Info EcoleDirecte) -->
     <div class="bottom-sheet-overlay" id="info-sheet">
         <div class="bottom-sheet">
             <div class="bottom-sheet-handle"></div>
@@ -272,7 +248,6 @@
         </div>
     </div>
 
-    <!-- Coefficients Dialog -->
     <div class="dialog-overlay" id="coef-dialog">
         <div class="dialog">
             <h2 class="dialog-title">Coefficients des matières</h2>
@@ -284,7 +259,6 @@
         </div>
     </div>
 
-    <!-- Share Card Dialog -->
     <div class="dialog-overlay" id="share-dialog">
         <div class="dialog" style="max-width: 360px;">
             <h2 class="dialog-title">Créer ta carte de partage</h2>
@@ -303,7 +277,6 @@
         </div>
     </div>
 
-    <!-- Edit Note Dialog -->
     <div class="dialog-overlay" id="edit-dialog">
         <div class="dialog">
             <h2 class="dialog-title">Modifier la note</h2>
@@ -334,16 +307,13 @@
         </div>
     </div>
 
-    <!-- Snackbar -->
     <div class="snackbar" id="snackbar"></div>
 	
-	<!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 	
-	<!-- Main JS -->
-    <script src="assets/js/app.js"></script>
+	<script src="assets/js/app.js"></script>
 </body>
 </html>
