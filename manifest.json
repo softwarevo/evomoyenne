@@ -1,11 +1,30 @@
 {
-  "name": "evoMoyenne Hub",
+  "name": "evoMoyenne",
   "short_name": "evoMoyenne",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
   "icons": [
+    {
+      "src": "assets/logos/logo-touch.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logos/logo-touch.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logos/logo-touch.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
     {
       "src": "assets/logos/logo-touch.png",
       "type": "image/png",
