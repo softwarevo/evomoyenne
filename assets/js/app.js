@@ -76,6 +76,23 @@
 
             return totalWeightedCoefs > 0 ? totalWeightedPoints / totalWeightedCoefs : null;
         }
+
+        function calculateGeneralAverage(mode = 'standard', includeGhost = true) {
+            let totalWeighted = 0;
+            let totalCoef = 0;
+            
+            data.subjects.forEach(subject => {
+                const avg = calculateSubjectAverage(subject, includeGhost);
+                if (avg !== null) {
+                    if (mode === 'standard') {
+                        totalWeighted += avg * subject.coef;
+                        totalCoef += subject.coef;
+                    } else {
+                        totalWeighted += avg;
+                        totalCoef += 1;
+                    }
+                }
+            });
             
             return totalCoef > 0 ? totalWeighted / totalCoef : null;
         }
