@@ -662,7 +662,7 @@
             
             doc.setFontSize(12);
             doc.setFont(undefined, 'normal');
-            doc.text(`Généré le ${date}`, 105, 28, { align: 'center' });
+            doc.text(`Généré le ${date} (bulletin non-officiel)`, 105, 28, { align: 'center' });
             
             doc.setFontSize(16);
             doc.setFont(undefined, 'bold');
@@ -683,7 +683,7 @@
                 doc.setFont(undefined, 'bold');
                 doc.text(subject.name, 20, y);
                 doc.setFont(undefined, 'normal');
-                doc.text(`Coef ${subject.coef} - Moyenne: ${subjectAvg !== null ? subjectAvg.toFixed(2) : '--'}`, 20, y + 6);
+                doc.text(`Coefficient ${subject.coef} - Moyenne: ${subjectAvg !== null ? subjectAvg.toFixed(2) : '--'}`, 20, y + 6);
                 
                 if (subject.notes.length > 0) {
                     const notesText = subject.notes.map(n => `${n.value}/${n.max}${n.ghost ? ' (sim)' : ''}`).join(', ');
@@ -747,6 +747,9 @@
             logo.src = theme === 'dark' ? '/assets/logos/logo-b.png' : '/assets/logos/logo-n.png';
             
             const githubLogo = document.getElementById('github-logo');
+            githubLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
+
+            const edLogo = document.getElementById('ed-logo');
             githubLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
             
             if (evolutionChart) {
