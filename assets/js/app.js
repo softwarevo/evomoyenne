@@ -420,9 +420,11 @@
             updateAll();
             
             document.getElementById('note-value').value = '';
-            document.getElementById('note-max').value = '20';
+            document.getElementById('note-max').value = currentMax;
             document.getElementById('note-coef').value = '1';
-            
+            document.getElementById('note-subject').value = currentSubject;
+            document.getElementById('note-value').focus();
+                
             hapticFeedback();
             showSnackbar('Note ajoutée !');
         }
