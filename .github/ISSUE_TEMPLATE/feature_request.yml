@@ -1,0 +1,20 @@
+name: ✨ Amélioration/Fonctionnalité
+description: Comment pouvons-nous améliorer evoMoyenne ?
+title: "[Feature]: "
+
+body:
+  - type: textarea
+    attributes:
+      label: Description de la fonctionnalité
+      description: Fais place à ta créativité en détaillant ce que tu veux
+      placeholder: "Ça serait cool une intégration d'un simulateur permettant de savoir si on aura le brevet"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Davantage de détails ?
+      description: "Une image pour montrer à quoi ça ressemblerait ? Un exemple ? Ce n'est pas obligatoire"
+      placeholder: "Stv je veux bien dev la feature mais passe moi 50000 Valorium"
+    validations:
+      required: false
