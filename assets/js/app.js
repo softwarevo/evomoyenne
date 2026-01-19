@@ -960,24 +960,26 @@
             const releaseDialog = document.getElementById('release-notes-dialog');
             const closeRelease = document.getElementById('close-release-notes');
 
-            if (versionBadge) {
+            if (versionBadge && releaseDialog) {
                 versionBadge.addEventListener('click', () => {
                     releaseDialog.classList.add('visible');
                     hapticFeedback();
                 });
             }
 
-            if (closeRelease) {
-                closeRelease.addEventListener('click', () => {
-                    releaseDialog.classList.remove('visible');
+            if (releaseDialog) {
+                if (closeRelease) {
+                    closeRelease.addEventListener('click', () => {
+                        releaseDialog.classList.remove('visible');
+                    });
+                }
+
+                releaseDialog.addEventListener('click', (e) => {
+                    if (e.target === releaseDialog) {
+                        releaseDialog.classList.remove('visible');
+                    }
                 });
             }
-
-            releaseDialog.addEventListener('click', (e) => {
-                if (e.target === releaseDialog) {
-                    releaseDialog.classList.remove('visible');
-                }
-            });
                 
         }
 
