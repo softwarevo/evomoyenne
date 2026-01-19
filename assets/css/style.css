@@ -21,6 +21,7 @@
     --md-sys-color-tertiary: #6a6a6a;
     --md-sys-color-error: #ba1a1a;
     --md-sys-color-success: #2e7d32;
+	--md-sys-color-contrast: #333333;
     --md-sys-color-shadow: rgba(0,0,0,0.15);
     
     /* Radius */
@@ -56,6 +57,7 @@
     --md-sys-color-on-secondary: #1a1a1a;
     --md-sys-color-secondary-container: #2a2a2a;
     --md-sys-color-tertiary: #909090;
+	--md-sys-color-contrast: #CCCCCC;
     --md-sys-color-shadow: rgba(0,0,0,0.4);
 }
 
@@ -481,7 +483,7 @@ body {
 
 .progress-bar {
     height: 100%;
-    background: var(--md-sys-color-primary);
+    background: var(--md-sys-color-contrast);
     border-radius: 4px;
     transition: width var(--transition-medium);
 }

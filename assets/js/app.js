@@ -321,7 +321,7 @@
                     datasets: [{
                         label: 'Moyenne',
                         data: [],
-                        borderColor: getComputedStyle(document.body).getPropertyValue('--md-sys-color-primary').trim(),
+						borderColor: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
                         backgroundColor: 'transparent',
                         tension: 0.4,
                         pointRadius: 4,
@@ -351,7 +351,7 @@
                                 color: 'rgba(154, 154, 154, 0.1)'
                             },
                             ticks: { 
-                                color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-on-surface-variant').trim(),
+                                color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
                                 font: { family: 'Inter' }
                             }
                         }
@@ -379,7 +379,7 @@
                 return data.history[k];
             });
             
-            const primaryColor = getComputedStyle(document.body).getPropertyValue('--md-sys-color-primary').trim();
+            const primaryColor = getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim();
             evolutionChart.data.datasets[0].borderColor = primaryColor || '#9a9a9a';
             evolutionChart.data.datasets[0].pointBackgroundColor = primaryColor || '#9a9a9a';
             
