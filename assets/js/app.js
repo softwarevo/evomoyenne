@@ -955,6 +955,29 @@
                     } 
                 });
             }
+
+            const versionBadge = document.getElementById('version-badge');
+            const releaseDialog = document.getElementById('release-notes-dialog');
+            const closeRelease = document.getElementById('close-release-notes');
+
+            if (versionBadge) {
+                versionBadge.addEventListener('click', () => {
+                    releaseDialog.classList.add('visible');
+                    hapticFeedback();
+                });
+            }
+
+            if (closeRelease) {
+                closeRelease.addEventListener('click', () => {
+                    releaseDialog.classList.remove('visible');
+                });
+            }
+
+            releaseDialog.addEventListener('click', (e) => {
+                if (e.target === releaseDialog) {
+                    releaseDialog.classList.remove('visible');
+                }
+            });
                 
         }
 
