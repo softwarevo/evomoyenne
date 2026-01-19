@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#121212">
+	<meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="evoMoyenne - Calculateur de moyenne EcoleDirecte">
@@ -32,7 +33,7 @@
             <div class="logo-container">
                 <img id="logo-img" src="/assets/logos/logo-b.png" alt="Logo">
                 <span class="logo-text">evoMoyenne</span>
-				<span class="version-badge">v1.0.1</span>
+				<span class="version-badge" id="version-badge" style="cursor: pointer;">v1.0.1</span>
             </div>
             <div class="top-actions">
 				<button class="icon-btn" id="feedback-btn" title="Signaler un bug ou suggérer">
@@ -304,6 +305,23 @@
             <div class="dialog-actions">
                 <button class="dialog-btn dialog-btn-secondary" id="close-edit-dialog">Annuler</button>
                 <button class="dialog-btn dialog-btn-primary" id="save-edit-dialog">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+	<div class="dialog-overlay" id="release-notes-dialog">
+        <div class="dialog">
+            <h2 class="dialog-title">Notes de version (v1.0.1)</h2>
+            <div class="dialog-content" style="max-height: 300px; overflow-y: auto; text-align: left;">
+                <p><strong>Nouveautés :</strong></p>
+                <ul style="padding-left: 20px; margin-top: 8px;">
+                    <li>✨ Ajout du bouton de feedback (bugs/suggestions)</li>
+                    <li>📲 Support du partage natif Android/iOS</li>
+                    <li>🏷️ Release notes en cliquant sur le badge de version</li>
+                </ul>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn dialog-btn-primary" id="close-release-notes">Génial !</button>
             </div>
         </div>
     </div>
