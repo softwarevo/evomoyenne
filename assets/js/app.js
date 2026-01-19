@@ -635,24 +635,45 @@
             
             document.getElementById('share-form').style.display = 'none';
             preview.style.display = 'block';
-            
+
             setTimeout(async () => {
                 try {
                     const canvas = await html2canvas(document.getElementById('generated-card'), {
                         scale: 2,
                         backgroundColor: null
                     });
-                    
-                    const link = document.createElement('a');
-                    link.download = `evomoyenne-${name.toLowerCase()}.png`;
-                    link.href = canvas.toDataURL();
-                    link.click();
-                    
-                    showSnackbar('Image téléchargée !');
+
+                    canvas.toBlob(async (blob) => {
+                        const dateF = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
+                        const fileName = `moyenne-${name.toLowerCase()}-${dateF}.png`;
+            
+                        const file = new File([blob], fileName, { type: 'image/png' });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'Ma Moyenne',
+                                    text: `Check ma moyenne : ${avg.toFixed(2)} !`
+                               });
+                            } catch (shareErr) {
+                                console.log('Partage annulé ou échoué', shareErr);
+                            }
+                        } else {
+                            const link = document.createElement('a');
+                            link.download = fileName;
+                            link.href = canvas.toDataURL();
+                            link.click();
+                            showSnackbar('Téléchargement lancé (partage non supporté)');
+                        }
+                    }, 'image/png');
+
                 } catch (err) {
                     showSnackbar('Erreur lors de la génération');
+                    console.error(err);
                 }
             }, 100);
+                
         }
 
         async function exportPDF() {
@@ -914,28 +935,27 @@
                 });
             });
 
-            const versionBadge = document.getElementById('version-badge');
-            const releaseDialog = document.getElementById('release-notes-dialog');
-            const closeRelease = document.getElementById('close-release-notes');
+            const feedbackBtn = document.getElementById('feedback-btn');
+            const feedbackDialog = document.getElementById('feedback-dialog');
+            const closeFeedback = document.getElementById('close-feedback-dialog');
 
-            if (versionBadge) {
-                versionBadge.addEventListener('click', () => {
-                    releaseDialog.classList.add('visible');
+            if (feedbackBtn && feedbackDialog) {
+                feedbackBtn.addEventListener('click', () => {
+                    feedbackDialog.classList.add('visible');
                     hapticFeedback();
                 });
-            }
 
-            if (closeRelease) {
-                closeRelease.addEventListener('click', () => {
-                    releaseDialog.classList.remove('visible');
+                closeFeedback.addEventListener('click', () => {
+                    feedbackDialog.classList.remove('visible');
+                });
+
+                feedbackDialog.addEventListener('click', (e) => {
+                    if (e.target === feedbackDialog) {
+                        feedbackDialog.classList.remove('visible');
+                    } 
                 });
             }
-
-            releaseDialog.addEventListener('click', (e) => {
-                if (e.target === releaseDialog) {
-                    releaseDialog.classList.remove('visible');
-                }
-            });
+                
         }
 
         // ==================== PWA SERVICE WORKER ====================

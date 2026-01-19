@@ -1089,6 +1089,19 @@ body {
     transform: scale(1.1);
 }
 
+/* Feedback button */
+#feedback-dialog .export-btn {
+    justify-content: flex-start;
+    padding-left: 20px;
+    width: 100%;
+    text-decoration: none;
+    margin-bottom: 8px;
+}
+
+#feedback-dialog .material-symbols-rounded {
+    margin-right: 12px;
+}
+
 /* Generated Share Card */
 .generated-card {
     width: 300px;
