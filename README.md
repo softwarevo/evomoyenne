@@ -11,7 +11,7 @@
 ## 🗺️ Roadmap
 Voici les prochaines étapes du développement :
 - [ ] **Connexion EcoleDirecte** : Import automatique de vos notes en temps réel. **[EN COURS]**
-- [ ] **Appréciations IA** : Appréciation courte selon votre moyenne et évolution, ainsi qu'une appréciation longue , plus précise (sur le bulletin fictif).
+- [ ] **evoMoyenne AI** : Appréciations, scores, coefs automatiques, prédictions de notes et plus, générés par IA !
 
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
