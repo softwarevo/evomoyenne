@@ -1,4 +1,4 @@
-const CACHE_NAME = 'evomoyenne-v1.0.1';
+const CACHE_NAME = 'evomoyenne-v1.0.1.1';
 const ASSETS = [
     './',
     './index.html',
@@ -8,12 +8,14 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
+    self.skipWaiting();
     e.waitUntil(
         caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))
     );
 });
 
 self.addEventListener('activate', e => {
+    e.waitUntil(clients.claim());
     e.waitUntil(
         caches.keys().then(keys => Promise.all(
             keys.map(key => {
