@@ -15,7 +15,7 @@
 
 ## 🗺️ Roadmap
 Voici les prochaines étapes du développement :
-- [ ] **evoAI** : Appréciation courte selon votre moyenne et évolution, ainsi qu'une appréciation longue , plus précise (sur le bulletin fictif) et autres.
+- [ ] **evoAI** : Appréciations, scores, coefs automatiques, prédictions de notes et plus, générés par un modèle d'IA spécial !
 
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**

@@ -1020,3 +1020,23 @@
             initChart();
             updateAll();
         });
+
+        // ==================== UPDATE CHECK ====================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(reg => {
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateBanner();
+                        }
+                    });
+                });
+            });
+        }
+
+        function showUpdateBanner() {
+            if (confirm("Nouvelle version de evoMoyenne disponible ! Recharger ?")) {
+                window.location.reload();
+            }
+        }
