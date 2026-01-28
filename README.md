@@ -1,5 +1,8 @@
 # 📈 evoMoyenne
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![](https://img.shields.io/github/v/release/softwarevo/evomoyenne)
+
 > Une application web fluide pour calculer et suivre l'évolution de vos moyennes en un clin d'œil. 🚀
 
 ## ✨ Fonctionnalités
