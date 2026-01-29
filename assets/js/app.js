@@ -772,18 +772,24 @@
             document.body.setAttribute('data-theme', theme);
             data.theme = theme;
             
-            const themeToggle = document.getElementById('theme-toggle');
-            const icon = themeToggle.querySelector('.material-symbols-rounded');
-            icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+            const themeLabel = document.getElementById('theme-label');
+            const themeIcon = document.getElementById('menu-theme-toggle')?.querySelector('.material-symbols-rounded');
+            
+            if (themeLabel && themeIcon) {
+                if (theme === 'dark') {
+                    themeLabel.textContent = 'Mode Clair';
+                    themeIcon.textContent = 'light_mode';
+                } else {
+                    themeLabel.textContent = 'Mode Sombre';
+                    themeIcon.textContent = 'dark_mode';
+                }
+            }
             
             const logo = document.getElementById('logo-img');
             logo.src = theme === 'dark' ? '/assets/logos/logo-b.png' : '/assets/logos/logo-n.png';
-            
-            const githubLogo = document.getElementById('github-logo');
-            githubLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
 
             const edLogo = document.getElementById('ed-logo');
-            edLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
+            if(edLogo) edLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
             
             if (evolutionChart) {
                 setTimeout(updateChart, 100);
@@ -837,8 +843,6 @@
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => switchPage(item.dataset.page));
             });
-            
-            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
             
             document.getElementById('add-note-btn').addEventListener('click', addNote);
             
@@ -907,6 +911,33 @@
                 document.getElementById('share-preview').style.display = 'none';
                 document.getElementById('share-dialog').classList.add('visible');
             });
+
+            const profileTrigger = document.getElementById('profile-trigger');
+            const profileDropdown = document.getElementById('profile-dropdown');
+            
+            if (profileTrigger && profileDropdown) {
+                profileTrigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle('visible');
+                    hapticFeedback();
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!profileWrapper.contains(e.target)) {
+                        profileDropdown.classList.remove('visible');
+                    }
+                });
+                
+                const profileWrapper = document.querySelector('.profile-wrapper');
+            }
+
+            const menuThemeToggle = document.getElementById('menu-theme-toggle');
+            if (menuThemeToggle) {
+                menuThemeToggle.addEventListener('click', () => {
+                    toggleTheme();
+                    profileDropdown.classList.remove('visible'); 
+                });
+            }
             
             document.getElementById('close-share-dialog').addEventListener('click', () => {
                 document.getElementById('share-dialog').classList.remove('visible');
