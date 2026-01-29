@@ -934,28 +934,7 @@
                     }
                 });
             });
-
-            const feedbackBtn = document.getElementById('feedback-btn');
-            const feedbackDialog = document.getElementById('feedback-dialog');
-            const closeFeedback = document.getElementById('close-feedback-dialog');
-
-            if (feedbackBtn && feedbackDialog) {
-                feedbackBtn.addEventListener('click', () => {
-                    feedbackDialog.classList.add('visible');
-                    hapticFeedback();
-                });
-
-                closeFeedback.addEventListener('click', () => {
-                    feedbackDialog.classList.remove('visible');
-                });
-
-                feedbackDialog.addEventListener('click', (e) => {
-                    if (e.target === feedbackDialog) {
-                        feedbackDialog.classList.remove('visible');
-                    } 
-                });
-            }
-
+			
             const versionBadge = document.getElementById('version-badge');
             const releaseDialog = document.getElementById('release-notes-dialog');
             const closeRelease = document.getElementById('close-release-notes');
