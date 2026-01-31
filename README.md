@@ -15,7 +15,7 @@
 ## 🗺️ Roadmap
 Voici les prochaines étapes du développement :
 - [ ] **evoAI** : Appréciations, scores, coefs automatiques, prédictions de notes et plus, générés par un modèle d'IA spécial !
-- [ ] **Connexion EcoleDirecte** (PRESQUE PRÊT)
+- [ ] **Connexion EcoleDirecte** (PRESQUE PRÊT, voir branche v1.1)
 
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
