@@ -40,6 +40,9 @@
             return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
+        // ==================== STATE MANAGEMENT ====================
+        let isLoggedOut = true;
+
         // ==================== CALCULATIONS ====================
         function calculateSubjectAverage(subject, includeGhost = true) {
             const notes = includeGhost ? subject.notes : subject.notes.filter(n => !n.ghost);
@@ -306,6 +309,84 @@
             
             const notesList = document.getElementById(`notes-${subjectId}`);
             notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
+        }
+
+        function updateProfileUI() {
+            const profileBtn = document.getElementById('profile-trigger');
+            const dropdown = document.getElementById('profile-dropdown');
+    
+            if (!profileBtn || !dropdown) return;
+
+            if (isLoggedOut) {
+                profileBtn.innerHTML = `
+                    <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
+                        <span class="material-symbols-rounded">login</span>
+                    </div>
+                    <span class="profile-name">Se connecter</span>
+                `;
+
+                dropdown.innerHTML = `
+                    <div class="login-container">
+                        <h3 class="dropdown-title">Connexion</h3>
+                        <div class="form-group">
+                            <input type="text" class="form-input small-input" placeholder="Identifiant">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-input small-input" placeholder="Mot de passe">
+                        </div>
+                        <button class="add-btn" id="login-submit-btn">
+                            Valider
+                        </button>
+                    </div>
+                `;
+            } else {
+                profileBtn.innerHTML = `
+                    <div class="profile-avatar">
+                        <span class="material-symbols-rounded">person</span>
+                    </div>
+                    <span class="profile-name">Prénom Nom</span>
+                `;
+
+                dropdown.innerHTML = `
+                    <button class="dropdown-item" id="menu-theme-toggle">
+                        <span class="material-symbols-rounded">${data.theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+                        <span id="theme-label">${data.theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}</span>
+                    </button>
+                    <button class="dropdown-item">
+                        <span class="material-symbols-rounded">info</span>
+                        À propos
+                    </button>
+                    <button class="dropdown-item">
+                        <span class="material-symbols-rounded">settings</span>
+                        Paramètres
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item item-danger" id="logout-btn">
+                        <span class="material-symbols-rounded">logout</span>
+                        Se déconnecter
+                    </button>
+                `;
+        
+                attachMenuListeners();
+            }
+        }
+
+        function attachMenuListeners() {
+            const themeToggle = document.getElementById('menu-theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    toggleTheme();
+                });
+            }
+    
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    isLoggedOut = true;
+                    updateProfileUI();
+                    hapticFeedback();
+                });
+            }
         }
 
         // ==================== CHART ====================
@@ -913,23 +994,34 @@
             });
 
             const profileTrigger = document.getElementById('profile-trigger');
-            const profileDropdown = document.getElementById('profile-dropdown');
-            
-            if (profileTrigger && profileDropdown) {
-                profileTrigger.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    profileDropdown.classList.toggle('visible');
-                    hapticFeedback();
-                });
+                const profileDropdown = document.getElementById('profile-dropdown');
+    
+                if (profileTrigger && profileDropdown) {
+                    updateProfileUI();
 
-                document.addEventListener('click', (e) => {
-                    if (!profileWrapper.contains(e.target)) {
-                        profileDropdown.classList.remove('visible');
-                    }
-                });
-                
-                const profileWrapper = document.querySelector('.profile-wrapper');
-            }
+                    profileTrigger.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        profileDropdown.classList.toggle('visible');
+                        hapticFeedback();
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        const wrapper = document.querySelector('.profile-wrapper');
+                        if (wrapper && !wrapper.contains(e.target)) {
+                            profileDropdown.classList.remove('visible');
+                        }
+                    });
+        
+                    profileDropdown.addEventListener('click', (e) => {
+                        if (e.target.id === 'login-submit-btn') {
+                            isLoggedOut = false;
+                            updateProfileUI();
+                            profileDropdown.classList.remove('visible');
+                            showSnackbar('Connexion réussie !');
+                            hapticFeedback();
+                        }
+                    });
+                }
 
             const menuThemeToggle = document.getElementById('menu-theme-toggle');
             if (menuThemeToggle) {
