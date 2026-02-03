@@ -1370,3 +1370,39 @@ body {
         padding: 6px;
     }
 }
+
+.login-container {
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 200px;
+}
+
+.dropdown-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    padding-left: 4px;
+}
+
+.small-input {
+    padding: 10px 12px;
+    font-size: 14px;
+    background: var(--md-sys-color-surface-container-highest);
+}
+
+.login-container .add-btn {
+    margin-top: 4px;
+    padding: 10px;
+    font-size: 14px;
+}
+
+.dropdown-menu {
+    transform-origin: top right;
+    transition: 
+        opacity var(--transition-fast), 
+        transform var(--transition-fast),
+        visibility var(--transition-fast),
+        height var(--transition-medium);
+}
