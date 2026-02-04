@@ -1085,34 +1085,39 @@
                 
         }
 
-        // ==================== PWA SERVICE WORKER ====================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    const CACHE_NAME = 'evomoyenne';
-                    const urlsToCache = ['/'];
-                    
-                    self.addEventListener('install', event => {
-                        event.waitUntil(
-                            caches.open(CACHE_NAME)
-                                .then(cache => cache.addAll(urlsToCache))
-                        );
-                    });
-                    
-                    self.addEventListener('fetch', event => {
-                        event.respondWith(
-                            caches.match(event.request)
-                                .then(response => response || fetch(event.request))
-                        );
-                    });
-                `;
-                
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(swUrl).catch(() => {});
+// ==================== SERVICE WORKER MANAGEMENT ====================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+			
+            if (navigator.onLine) {
+                reg.update();
+            }
+			
+            setInterval(() => {
+                if (navigator.onLine) {
+                    console.log('Vérification de mise à jour...');
+                    reg.update();
+                }
+            }, 6 * 60 * 60 * 1000);
+			
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateBanner();
+                    }
+                });
             });
-        }
+        }).catch(err => console.error('SW Registration Error:', err));
+    });
+}
+
+function showUpdateBanner() {
+    if (confirm("Nouvelle version de evoMoyenne disponible ! Recharger pour mettre à jour ?")) {
+        window.location.reload();
+    }
+}
 
         // ==================== INIT ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -1122,23 +1127,3 @@
             initChart();
             updateAll();
         });
-
-        // ==================== UPDATE CHECK ====================
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(reg => {
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showUpdateBanner();
-                        }
-                    });
-                });
-            });
-        }
-
-        function showUpdateBanner() {
-            if (confirm("Nouvelle version de evoMoyenne disponible ! Recharger ?")) {
-                window.location.reload();
-            }
-        }
