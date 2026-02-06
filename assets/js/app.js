@@ -370,12 +370,16 @@
                 return (typeof val === 'object' && val !== null) ? val.generale : val;
             });
 
-            if (chartData.length > 0) {
-                const minVal = Math.min(...chartData);
-                const maxVal = Math.max(...chartData);
-                
-                evolutionChart.options.scales.y.min = Math.max(0, Math.floor(minVal - 1));
-                evolutionChart.options.scales.y.max = Math.min(20, Math.ceil(maxVal + 1));
+            const allHistoryValues = Object.values(data.history).map(v => 
+                (typeof v === 'object' && v !== null) ? v.generale : v
+            );
+
+            if (allHistoryValues.length > 0) {
+                const absoluteMin = Math.min(...allHistoryValues);
+                const absoluteMax = Math.max(...allHistoryValues);
+        
+                evolutionChart.options.scales.y.min = Math.floor(absoluteMin - 0.5);
+                evolutionChart.options.scales.y.max = Math.ceil(absoluteMax + 0.5);
             } else {
                 evolutionChart.options.scales.y.min = 0;
                 evolutionChart.options.scales.y.max = 20;
