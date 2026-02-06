@@ -321,7 +321,7 @@
                     datasets: [{
                         label: 'Moyenne',
                         data: [],
-						borderColor: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
+                        borderColor: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
                         backgroundColor: 'transparent',
                         tension: 0.4,
                         pointRadius: 4,
@@ -335,7 +335,6 @@
                     plugins: {
                         legend: { display: false }
                     },
-                   
                     scales: {
                         x: {
                             grid: { display: false },
@@ -345,14 +344,13 @@
                             }
                         },
                         y: {
-                            min: 0,
-                            max: 20,
                             grid: { 
                                 color: 'rgba(154, 154, 154, 0.1)'
                             },
                             ticks: { 
                                 color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
-                                font: { family: 'Inter' }
+                                font: { family: 'Inter' },
+                                stepSize: 1
                             }
                         }
                     }
@@ -367,17 +365,28 @@
             
             const keys = Object.keys(data.history).sort().slice(-14);
             
+            const chartData = keys.map(k => {
+                const val = data.history[k];
+                return (typeof val === 'object' && val !== null) ? val.generale : val;
+            });
+
+            if (chartData.length > 0) {
+                const minVal = Math.min(...chartData);
+                const maxVal = Math.max(...chartData);
+                
+                evolutionChart.options.scales.y.min = Math.max(0, Math.floor(minVal - 1));
+                evolutionChart.options.scales.y.max = Math.min(20, Math.ceil(maxVal + 1));
+            } else {
+                evolutionChart.options.scales.y.min = 0;
+                evolutionChart.options.scales.y.max = 20;
+            }
+
             evolutionChart.data.labels = keys.map(k => {
                 const date = new Date(k);
                 return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
             });
             
-            evolutionChart.data.datasets[0].data = keys.map(k => {
-                if (typeof data.history[k] === 'object' && data.history[k] !== null) {
-                    return data.history[k].generale;
-                }
-                return data.history[k];
-            });
+            evolutionChart.data.datasets[0].data = chartData;
             
             const primaryColor = getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim();
             evolutionChart.data.datasets[0].borderColor = primaryColor || '#9a9a9a';
