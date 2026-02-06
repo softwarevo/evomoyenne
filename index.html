@@ -7,36 +7,12 @@
 	<meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Calcule ta moyenne générale facilement avec evoMoyenne. Synchronise tes notes EcoleDirecte, simule tes résultats avec les notes fantômes et visualise ton évolution.">
+    <meta name="description" content="evoMoyenne - Calculateur de moyenne EcoleDirecte">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="evoMoyenne">
     <link rel="apple-touch-icon" href="assets/logos/logo-touch.png">
     <title>evoMoyenne</title>
-	<script type="application/ld+json">
-    {
- 	 "@context": "https://schema.org",
- 	 "@type": "WebApplication",
-  	"name": "evoMoyenne",
-	  "alternateName": "Evo Moyenne",
- 	 "description": "Calcule ta moyenne scolaire facilement, simule des notes et synchronise ton compte EcoleDirecte. L'outil indispensable pour les élèves.",
- 	 "url": "https://evomoyenne.qzz.io",
-	  "applicationCategory": "EducationApplication",
- 	 "operatingSystem": "All",
-	  "offers": {
- 	   "@type": "Offer",
-  	  "price": "0",
- 	   "priceCurrency": "EUR"
- 	 },
- 	 "featureList": [
-  	  "Calcul de moyenne générale",
-  	  "Notes fantômes (simulation)",
-  	  "Synchronisation EcoleDirecte",
-  	  "Graphique d'évolution",
-	  "Suivi des moyennes",
-	  "Moyenne EcoleDirecte",
-	  "EcoleDirecte"
-	  ]
-	}
-	</script>
 
 	<!-- Manifest PWA -->
     <link rel="manifest" href="manifest.webmanifest">
@@ -55,9 +31,9 @@
     <div class="app-container">
         <header class="top-bar">
             <div class="logo-container">
-                <img id="logo-img" src="/assets/logos/logo-b.png" alt="Logo" loading="eager" width="32" height="32">
+                <img id="logo-img" src="/assets/logos/logo-b.png" alt="Logo">
                 <span class="logo-text">evoMoyenne</span>
-				<span class="version-badge" id="version-badge" style="cursor: pointer;">v1.0.2</span>
+				<span class="version-badge" id="version-badge" style="cursor: pointer;">v1.1</span>
             </div>
 			
             <div class="top-actions">
@@ -288,6 +264,8 @@
                 <p>Bientôt disponible ! La connexion à EcoleDirecte te permettra de :</p>
                 <ul>
                     <li>📚 Synchroniser automatiquement tes notes</li>
+                    <li>📅 Voir tes devoirs et contrôles à venir</li>
+                    <li>📃 Obtenir un rapport quotidien de ton évolution</li>
                 </ul>
                 <p>On travaille dur pour te proposer cette fonctionnalité le plus vite possible !</p>
             </div>
@@ -356,12 +334,11 @@
 
 	<div class="dialog-overlay" id="release-notes-dialog">
         <div class="dialog">
-            <h2 class="dialog-title">Notes de version (v1.0.2)</h2>
+            <h2 class="dialog-title">Notes de version (v1.1)</h2>
             <div class="dialog-content" style="max-height: 300px; overflow-y: auto; text-align: left;">
                 <p><strong>Nouveautés :</strong></p>
                 <ul style="padding-left: 20px; margin-top: 8px;">
-                    <li>🔎 Amélioration du SEO (recherches Google)</li>
-					<li>🛠️ Divers autres fixs</li>
+                    <li>🔗 Ajout de la connexion à EcoleDirecte</li>
                 </ul>
             </div>
             <div class="dialog-actions">

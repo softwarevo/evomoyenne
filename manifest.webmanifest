@@ -1,12 +1,10 @@
 {
   "name": "evoMoyenne",
   "short_name": "evoMoyenne",
-  "description": "Calculateur de moyenne avancé avec synchronisation EcoleDirecte.",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#121212",
-  "theme_color": "#121212",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "assets/logos/logo-touch.png",

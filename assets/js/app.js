@@ -402,7 +402,7 @@
                     datasets: [{
                         label: 'Moyenne',
                         data: [],
-                        borderColor: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
+						borderColor: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
                         backgroundColor: 'transparent',
                         tension: 0.4,
                         pointRadius: 4,
@@ -416,6 +416,7 @@
                     plugins: {
                         legend: { display: false }
                     },
+                   
                     scales: {
                         x: {
                             grid: { display: false },
@@ -425,13 +426,14 @@
                             }
                         },
                         y: {
+                            min: 0,
+                            max: 20,
                             grid: { 
                                 color: 'rgba(154, 154, 154, 0.1)'
                             },
                             ticks: { 
                                 color: getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim(),
-                                font: { family: 'Inter' },
-                                stepSize: 1
+                                font: { family: 'Inter' }
                             }
                         }
                     }
@@ -446,32 +448,17 @@
             
             const keys = Object.keys(data.history).sort().slice(-14);
             
-            const chartData = keys.map(k => {
-                const val = data.history[k];
-                return (typeof val === 'object' && val !== null) ? val.generale : val;
-            });
-
-            const allHistoryValues = Object.values(data.history).map(v => 
-                (typeof v === 'object' && v !== null) ? v.generale : v
-            );
-
-            if (allHistoryValues.length > 0) {
-                const absoluteMin = Math.min(...allHistoryValues);
-                const absoluteMax = Math.max(...allHistoryValues);
-        
-                evolutionChart.options.scales.y.min = Math.floor(absoluteMin - 0.5);
-                evolutionChart.options.scales.y.max = Math.ceil(absoluteMax + 0.5);
-            } else {
-                evolutionChart.options.scales.y.min = 0;
-                evolutionChart.options.scales.y.max = 20;
-            }
-
             evolutionChart.data.labels = keys.map(k => {
                 const date = new Date(k);
                 return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
             });
             
-            evolutionChart.data.datasets[0].data = chartData;
+            evolutionChart.data.datasets[0].data = keys.map(k => {
+                if (typeof data.history[k] === 'object' && data.history[k] !== null) {
+                    return data.history[k].generale;
+                }
+                return data.history[k];
+            });
             
             const primaryColor = getComputedStyle(document.body).getPropertyValue('--md-sys-color-contrast').trim();
             evolutionChart.data.datasets[0].borderColor = primaryColor || '#9a9a9a';
