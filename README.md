@@ -21,4 +21,4 @@ Voici les prochaines étapes du développement :
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
 
 ## ☁️ Version
-evoMoyenne est actuellement sous sa version 1.0.1.
+evoMoyenne est actuellement sous sa version 1.0.2.
