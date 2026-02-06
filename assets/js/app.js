@@ -40,6 +40,9 @@
             return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
+        // ==================== STATE MANAGEMENT ====================
+        let isLoggedOut = true;
+
         // ==================== CALCULATIONS ====================
         function calculateSubjectAverage(subject, includeGhost = true) {
             const notes = includeGhost ? subject.notes : subject.notes.filter(n => !n.ghost);
@@ -306,6 +309,84 @@
             
             const notesList = document.getElementById(`notes-${subjectId}`);
             notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
+        }
+
+        function updateProfileUI() {
+            const profileBtn = document.getElementById('profile-trigger');
+            const dropdown = document.getElementById('profile-dropdown');
+    
+            if (!profileBtn || !dropdown) return;
+
+            if (isLoggedOut) {
+                profileBtn.innerHTML = `
+                    <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
+                        <span class="material-symbols-rounded">login</span>
+                    </div>
+                    <span class="profile-name">Se connecter</span>
+                `;
+
+                dropdown.innerHTML = `
+                    <div class="login-container">
+                        <h3 class="dropdown-title">Connexion</h3>
+                        <div class="form-group">
+                            <input type="text" class="form-input small-input" placeholder="Identifiant">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-input small-input" placeholder="Mot de passe">
+                        </div>
+                        <button class="add-btn" id="login-submit-btn">
+                            Valider
+                        </button>
+                    </div>
+                `;
+            } else {
+                profileBtn.innerHTML = `
+                    <div class="profile-avatar">
+                        <span class="material-symbols-rounded">person</span>
+                    </div>
+                    <span class="profile-name">Prénom Nom</span>
+                `;
+
+                dropdown.innerHTML = `
+                    <button class="dropdown-item" id="menu-theme-toggle">
+                        <span class="material-symbols-rounded">${data.theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+                        <span id="theme-label">${data.theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}</span>
+                    </button>
+                    <button class="dropdown-item">
+                        <span class="material-symbols-rounded">info</span>
+                        À propos
+                    </button>
+                    <button class="dropdown-item">
+                        <span class="material-symbols-rounded">settings</span>
+                        Paramètres
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item item-danger" id="logout-btn">
+                        <span class="material-symbols-rounded">logout</span>
+                        Se déconnecter
+                    </button>
+                `;
+        
+                attachMenuListeners();
+            }
+        }
+
+        function attachMenuListeners() {
+            const themeToggle = document.getElementById('menu-theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    toggleTheme();
+                });
+            }
+    
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    isLoggedOut = true;
+                    updateProfileUI();
+                    hapticFeedback();
+                });
+            }
         }
 
         // ==================== CHART ====================
@@ -785,18 +866,24 @@
             document.body.setAttribute('data-theme', theme);
             data.theme = theme;
             
-            const themeToggle = document.getElementById('theme-toggle');
-            const icon = themeToggle.querySelector('.material-symbols-rounded');
-            icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+            const themeLabel = document.getElementById('theme-label');
+            const themeIcon = document.getElementById('menu-theme-toggle')?.querySelector('.material-symbols-rounded');
+            
+            if (themeLabel && themeIcon) {
+                if (theme === 'dark') {
+                    themeLabel.textContent = 'Mode Clair';
+                    themeIcon.textContent = 'light_mode';
+                } else {
+                    themeLabel.textContent = 'Mode Sombre';
+                    themeIcon.textContent = 'dark_mode';
+                }
+            }
             
             const logo = document.getElementById('logo-img');
             logo.src = theme === 'dark' ? '/assets/logos/logo-b.png' : '/assets/logos/logo-n.png';
-            
-            const githubLogo = document.getElementById('github-logo');
-            githubLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
 
             const edLogo = document.getElementById('ed-logo');
-            edLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
+            if(edLogo) edLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
             
             if (evolutionChart) {
                 setTimeout(updateChart, 100);
@@ -850,8 +937,6 @@
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => switchPage(item.dataset.page));
             });
-            
-            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
             
             document.getElementById('add-note-btn').addEventListener('click', addNote);
             
@@ -920,6 +1005,44 @@
                 document.getElementById('share-preview').style.display = 'none';
                 document.getElementById('share-dialog').classList.add('visible');
             });
+
+            const profileTrigger = document.getElementById('profile-trigger');
+                const profileDropdown = document.getElementById('profile-dropdown');
+    
+                if (profileTrigger && profileDropdown) {
+                    updateProfileUI();
+
+                    profileTrigger.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        profileDropdown.classList.toggle('visible');
+                        hapticFeedback();
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        const wrapper = document.querySelector('.profile-wrapper');
+                        if (wrapper && !wrapper.contains(e.target)) {
+                            profileDropdown.classList.remove('visible');
+                        }
+                    });
+        
+                    profileDropdown.addEventListener('click', (e) => {
+                        if (e.target.id === 'login-submit-btn') {
+                            isLoggedOut = false;
+                            updateProfileUI();
+                            profileDropdown.classList.remove('visible');
+                            showSnackbar('Connexion réussie !');
+                            hapticFeedback();
+                        }
+                    });
+                }
+
+            const menuThemeToggle = document.getElementById('menu-theme-toggle');
+            if (menuThemeToggle) {
+                menuThemeToggle.addEventListener('click', () => {
+                    toggleTheme();
+                    profileDropdown.classList.remove('visible'); 
+                });
+            }
             
             document.getElementById('close-share-dialog').addEventListener('click', () => {
                 document.getElementById('share-dialog').classList.remove('visible');
@@ -947,28 +1070,7 @@
                     }
                 });
             });
-
-            const feedbackBtn = document.getElementById('feedback-btn');
-            const feedbackDialog = document.getElementById('feedback-dialog');
-            const closeFeedback = document.getElementById('close-feedback-dialog');
-
-            if (feedbackBtn && feedbackDialog) {
-                feedbackBtn.addEventListener('click', () => {
-                    feedbackDialog.classList.add('visible');
-                    hapticFeedback();
-                });
-
-                closeFeedback.addEventListener('click', () => {
-                    feedbackDialog.classList.remove('visible');
-                });
-
-                feedbackDialog.addEventListener('click', (e) => {
-                    if (e.target === feedbackDialog) {
-                        feedbackDialog.classList.remove('visible');
-                    } 
-                });
-            }
-
+			
             const versionBadge = document.getElementById('version-badge');
             const releaseDialog = document.getElementById('release-notes-dialog');
             const closeRelease = document.getElementById('close-release-notes');
@@ -996,34 +1098,39 @@
                 
         }
 
-        // ==================== PWA SERVICE WORKER ====================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    const CACHE_NAME = 'evomoyenne';
-                    const urlsToCache = ['/'];
-                    
-                    self.addEventListener('install', event => {
-                        event.waitUntil(
-                            caches.open(CACHE_NAME)
-                                .then(cache => cache.addAll(urlsToCache))
-                        );
-                    });
-                    
-                    self.addEventListener('fetch', event => {
-                        event.respondWith(
-                            caches.match(event.request)
-                                .then(response => response || fetch(event.request))
-                        );
-                    });
-                `;
-                
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(swUrl).catch(() => {});
+// ==================== SERVICE WORKER MANAGEMENT ====================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+			
+            if (navigator.onLine) {
+                reg.update();
+            }
+			
+            setInterval(() => {
+                if (navigator.onLine) {
+                    console.log('Vérification de mise à jour...');
+                    reg.update();
+                }
+            }, 6 * 60 * 60 * 1000);
+			
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateBanner();
+                    }
+                });
             });
-        }
+        }).catch(err => console.error('SW Registration Error:', err));
+    });
+}
+
+function showUpdateBanner() {
+    if (confirm("Nouvelle version de evoMoyenne disponible ! Recharger pour mettre à jour ?")) {
+        window.location.reload();
+    }
+}
 
         // ==================== INIT ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -1033,23 +1140,3 @@
             initChart();
             updateAll();
         });
-
-        // ==================== UPDATE CHECK ====================
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(reg => {
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showUpdateBanner();
-                        }
-                    });
-                });
-            });
-        }
-
-        function showUpdateBanner() {
-            if (confirm("Nouvelle version de evoMoyenne disponible ! Recharger ?")) {
-                window.location.reload();
-            }
-        }

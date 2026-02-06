@@ -59,16 +59,39 @@
                 <span class="logo-text">evoMoyenne</span>
 				<span class="version-badge" id="version-badge" style="cursor: pointer;">v1.0.2</span>
             </div>
+			
             <div class="top-actions">
-				<button class="icon-btn" id="feedback-btn" title="Signaler un bug ou suggérer">
-                    <span class="material-symbols-rounded">bug_report</span>
-                </button>
-                <button class="icon-btn" id="theme-toggle" title="Changer le thème">
-                    <span class="material-symbols-rounded">dark_mode</span>
-                </button>
-                <a href="https://github.com/softwarevo/evomoyenne" class="icon-btn" target="_blank" title="GitHub">
-                    <img src="/assets/logos/github.png" alt="GitHub" style="width: 24px; height: 24px; filter: invert(1);" id="github-logo">
-                </a>
+                <div class="profile-wrapper">
+                    <button class="profile-btn" id="profile-trigger">
+                        <div class="profile-avatar">
+                            <span class="material-symbols-rounded">person</span>
+                        </div>
+                        <span class="profile-name">Prénom Nom</span>
+                    </button>
+
+					<div class="dropdown-menu" id="profile-dropdown">
+                    </div>
+
+                    <div class="dropdown-menu" id="profile-dropdown">
+                        <button class="dropdown-item" id="menu-theme-toggle">
+                            <span class="material-symbols-rounded">dark_mode</span>
+                            <span id="theme-label">Mode Clair</span>
+                        </button>
+                        <button class="dropdown-item">
+                            <span class="material-symbols-rounded">info</span>
+                            À propos
+                        </button>
+                        <button class="dropdown-item">
+                            <span class="material-symbols-rounded">settings</span>
+                            Paramètres
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item item-danger">
+                            <span class="material-symbols-rounded">logout</span>
+                            Se déconnecter
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
