@@ -42,6 +42,8 @@
 
         // ==================== STATE MANAGEMENT ====================
         let isLoggedOut = true;
+        let userSession = null;
+        let tempAuth = {};
 
         // ==================== CALCULATIONS ====================
         function calculateSubjectAverage(subject, includeGhost = true) {
@@ -344,7 +346,7 @@
                     <div class="profile-avatar">
                         <span class="material-symbols-rounded">person</span>
                     </div>
-                    <span class="profile-name">Prénom Nom</span>
+                    <span class="profile-name">${userSession ? userSession.identity.prenom + ' ' + userSession.identity.nom : 'Utilisateur'}</span>
                 `;
 
                 dropdown.innerHTML = `
@@ -932,6 +934,98 @@
             updateChart();
         }
 
+        // ==================== ECOLEDIRECTE BRIDGE ====================
+        async function handleEDLogin(identifiant, motdepasse, qcmResponse = null) {
+            const loginBtn = document.getElementById('login-submit-btn');
+            const container = document.querySelector('.login-container');
+            
+            if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Connexion...';
+            }
+
+            const payload = {
+                identifiant: identifiant,
+                motdepasse: motdepasse
+            };
+
+            if (qcmResponse) {
+                payload.qcmResponse = qcmResponse;
+                payload.tokens = tempAuth.tokens;
+            }
+
+            try {
+                const response = await fetch('https://ed.api.evomoyenne.qzz.io/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.status === '2FA_REQUIRED') {
+                    tempAuth = {
+                        identifiant,
+                        motdepasse,
+                        tokens: data.tokens
+                    };
+
+                    if (container) {
+                        const buttonsHtml = data.qcm.propositions.map((prop, index) => `
+                            <button class="add-btn challenge-btn" 
+                                    data-raw="${data.qcm.rawPropositions[index]}" 
+                                    style="margin-top: 8px; width:100%; justify-content:center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-surface);">
+                                ${prop}
+                            </button>
+                        `).join('');
+
+                        container.innerHTML = `
+                            <h3 class="dropdown-title" style="color: var(--md-sys-color-primary); font-size: 14px;">Vérification 🛡️</h3>
+                            <p style="font-size: 13px; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant);">${data.qcm.question}</p>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                ${buttonsHtml}
+                            </div>
+                        `;
+                    }
+                    hapticFeedback();
+                    return;
+                }
+
+                if (data.status === 'SUCCESS') {
+                    userSession = data;
+                    isLoggedOut = false;
+                    tempAuth = {};
+
+                    updateProfileUI();
+                    
+                    const dropdown = document.getElementById('profile-dropdown');
+                    if (dropdown) dropdown.classList.remove('visible');
+                    
+                    showSnackbar(`Salut ${userSession.identity.prenom} ! 👋`);
+                    triggerConfetti();
+                    hapticFeedback();
+                } else {
+                    throw new Error(data.message || 'Erreur inconnue');
+                }
+
+            } catch (err) {
+                console.error(err);
+                showSnackbar('Erreur : ' + (err.message || 'Connexion échouée'));
+                
+                updateProfileUI(); 
+                
+                setTimeout(() => {
+                    const dropdown = document.getElementById('profile-dropdown');
+                    if (dropdown) dropdown.classList.add('visible');
+                }, 100);
+            } finally {
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Valider';
+                }
+            }
+        }
+
         // ==================== EVENT LISTENERS ====================
         function initEventListeners() {
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -1027,11 +1121,24 @@
         
                     profileDropdown.addEventListener('click', (e) => {
                         if (e.target.id === 'login-submit-btn') {
-                            isLoggedOut = false;
-                            updateProfileUI();
-                            profileDropdown.classList.remove('visible');
-                            showSnackbar('Connexion réussie !');
-                            hapticFeedback();
+                            const inputs = profileDropdown.querySelectorAll('input');
+                            const id = inputs[0].value.trim();
+                            const pass = inputs[1].value.trim();
+
+                            if (!id || !pass) {
+                                showSnackbar('Il manque un truc là... 👀');
+                                return;
+                            }
+                            handleEDLogin(id, pass);
+                        }
+                        const challengeBtn = e.target.closest('.challenge-btn');
+                        if (challengeBtn) {
+                            const rawResponse = challengeBtn.dataset.raw; 
+                            
+                            challengeBtn.textContent = 'Vérification...';
+                            challengeBtn.disabled = true;
+
+                            handleEDLogin(tempAuth.identifiant, tempAuth.motdepasse, rawResponse);
                         }
                     });
                 }
