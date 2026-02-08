@@ -955,8 +955,9 @@
             }
 
             try {
-                const response = await fetch('https://ed.api.evomoyenne.qzz.io/', {
+                const response = await fetch('https://ed.api.evomoyenne.qzz.io', {
                     method: 'POST',
+					mode: 'cors'
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
