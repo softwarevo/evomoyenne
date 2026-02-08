@@ -966,8 +966,6 @@
                 if (response.status === 500) throw new Error('Réponse invalide');
 
                 const data = await response.json();
-				
-                const data = await response.json();
 
                 if (data.status === '2FA_REQUIRED') {
                     tempAuth = {
