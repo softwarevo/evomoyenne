@@ -962,6 +962,11 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (response.status === 401) throw new Error('Identifiants invalides');
+                if (response.status === 500) throw new Error('Réponse invalide');
+
+                const data = await response.json();
+				
                 const data = await response.json();
 
                 if (data.status === '2FA_REQUIRED') {
@@ -981,9 +986,8 @@
                         `).join('');
 
                         container.innerHTML = `
-                            <h3 class="dropdown-title" style="color: var(--md-sys-color-primary); font-size: 14px;">Vérification 🛡️</h3>
-                            <p style="font-size: 13px; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant);">${data.qcm.question}</p>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <h3 style="font-size: 13px; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant);">${data.qcm.question}</h3>
+							<div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding: 4px; border-radius: 8px;">
                                 ${buttonsHtml}
                             </div>
                         `;
