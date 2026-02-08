@@ -21,6 +21,8 @@
             theme: 'dark'
         };
 
+        let tempAuth = {};
+
         function loadData() {
             const saved = localStorage.getItem('evoMoyenne');
             if (saved) {
@@ -979,8 +981,8 @@
                     if (container) {
                         const buttonsHtml = data.qcm.propositions.map((prop, index) => `
                             <button class="add-btn challenge-btn" 
-                                    data-raw="${data.qcm.rawPropositions[index]}" 
-                                    style="margin-top: 8px; width:100%; justify-content:center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-surface);">
+                                    onclick="handleEDLogin('${identifiant}', '${motdepasse}', '${data.qcm.rawPropositions[index]}')"
+                                    style="margin-top: 8px; width:100%; justify-content:center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-surface); flex-shrink: 0;">
                                 ${prop}
                             </button>
                         `).join('');
