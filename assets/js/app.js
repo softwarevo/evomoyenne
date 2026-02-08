@@ -21,8 +21,6 @@
             theme: 'dark'
         };
 
-        let tempAuth = {};
-
         function loadData() {
             const saved = localStorage.getItem('evoMoyenne');
             if (saved) {
