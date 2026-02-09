@@ -1,0 +1,3 @@
+Contact: mailto:contact@evomoyenne.qzz.io
+Expires: 2027-01-01
+Preferred-Languages: fr, en
