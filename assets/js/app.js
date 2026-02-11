@@ -1055,20 +1055,6 @@
                 updateTargetProgress();
             });
             
-            document.getElementById('info-btn').addEventListener('click', () => {
-                document.getElementById('info-sheet').classList.add('visible');
-            });
-            
-            document.getElementById('close-info-sheet').addEventListener('click', () => {
-                document.getElementById('info-sheet').classList.remove('visible');
-            });
-            
-            document.getElementById('info-sheet').addEventListener('click', (e) => {
-                if (e.target.id === 'info-sheet') {
-                    document.getElementById('info-sheet').classList.remove('visible');
-                }
-            });
-            
             document.getElementById('coef-dialog-btn').addEventListener('click', openCoefDialog);
             
             document.getElementById('close-coef-dialog').addEventListener('click', () => {
