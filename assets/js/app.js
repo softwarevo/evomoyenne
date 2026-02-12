@@ -488,7 +488,7 @@
             const value = parseFloat(document.getElementById('note-value').value);
             const max = parseFloat(document.getElementById('note-max').value) || 20;
             const coef = parseFloat(document.getElementById('note-coef').value) || 1;
-            const isGhost = document.getElementById('ghost-checkbox').classList.contains('checked');
+            const isGhost = true;
             
             if (!subjectId || isNaN(value)) {
                 showSnackbar('Remplis tous les champs obligatoires');
