@@ -285,9 +285,6 @@
                         <span class="note-details">Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}</span>
                     </div>
                     <div class="note-actions">
-                        <button class="note-action-btn" onclick="toggleNoteGhost('${subjectId}', '${note.id}')" title="${note.ghost ? 'Rendre réelle' : 'Rendre fantôme'}">
-                            <span class="material-symbols-rounded">${note.ghost ? 'visibility' : 'visibility_off'}</span>
-                        </button>
                         <button class="note-action-btn" onclick="editNote('${subjectId}', '${note.id}')" title="Modifier">
                             <span class="material-symbols-rounded">edit</span>
                         </button>
@@ -605,13 +602,6 @@
             document.getElementById('edit-note-value').value = note.value;
             document.getElementById('edit-note-max').value = note.max;
             document.getElementById('edit-note-coef').value = note.coef;
-            
-            const editGhostCheckbox = document.getElementById('edit-ghost-checkbox');
-            if (note.ghost) {
-                editGhostCheckbox.classList.add('checked');
-            } else {
-                editGhostCheckbox.classList.remove('checked');
-            }
             
             document.getElementById('edit-dialog').classList.add('visible');
         }
@@ -1038,16 +1028,6 @@
             document.getElementById('add-note-btn').addEventListener('click', addNote);
             
             document.getElementById('add-subject-btn').addEventListener('click', addSubject);
-            
-            document.getElementById('ghost-checkbox').addEventListener('click', function() {
-                this.classList.toggle('checked');
-                hapticFeedback();
-            });
-            
-            document.getElementById('edit-ghost-checkbox').addEventListener('click', function() {
-                this.classList.toggle('checked');
-                hapticFeedback();
-            });
             
             document.getElementById('target-input').addEventListener('change', function() {
                 data.target = parseFloat(this.value) || 14;
