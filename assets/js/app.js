@@ -40,6 +40,60 @@
             return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
+        function normalizeString(str) {
+            return str.toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]/g, '');
+        }
+
+        function matchSubject(edName) {
+            const normalizedEd = normalizeString(edName);
+
+            const mapping = {
+                'mathematiques': 'maths',
+                'maths': 'maths',
+                'francais': 'francais',
+                'histoiregeographie': 'histoire',
+                'histoiregeo': 'histoire',
+                'anglaislv1': 'anglais',
+                'anglaislv2': 'anglais',
+                'anglais': 'anglais',
+                'allemandlv2': 'lv2',
+                'espagnollv2': 'lv2',
+                'allemand': 'lv2',
+                'espagnol': 'lv2',
+                'physiquechimie': 'physique',
+                'sciencesvieetterre': 'svt',
+                'svt': 'svt',
+                'technologie': 'techno',
+                'techno': 'techno',
+                'educationphysiqueetsportive': 'eps',
+                'eps': 'eps',
+                'artsplastiques': 'art',
+                'artplastique': 'art',
+                'educationmusicale': 'musique',
+                'musique': 'musique',
+                'latin': 'latin'
+            };
+
+            for (const [key, id] of Object.entries(mapping)) {
+                if (normalizedEd === key || normalizedEd.includes(key)) {
+                    const subject = data.subjects.find(s => s.id === id);
+                    if (subject) return subject;
+                }
+            }
+
+            for (const subject of data.subjects) {
+                const normalizedSub = normalizeString(subject.name);
+                if (normalizedEd === normalizedSub || normalizedEd.includes(normalizedSub) || normalizedSub.includes(normalizedEd)) {
+                    return subject;
+                }
+            }
+
+            return null;
+        }
+
         // ==================== STATE MANAGEMENT ====================
         let isLoggedOut = true;
         let userSession = null;
@@ -955,26 +1009,26 @@
                 if (response.status === 401) throw new Error('Identifiants invalides');
                 if (response.status === 500) throw new Error('Réponse invalide');
 
-                const data = await response.json();
+                const apiData = await response.json();
 
-                if (data.status === '2FA_REQUIRED') {
+                if (apiData.status === '2FA_REQUIRED') {
                     tempAuth = {
                         identifiant,
                         motdepasse,
-                        tokens: data.tokens
+                        tokens: apiData.tokens
                     };
 
                     if (container) {
-                        const buttonsHtml = data.qcm.propositions.map((prop, index) => `
+                        const buttonsHtml = apiData.qcm.propositions.map((prop, index) => `
                             <button class="add-btn challenge-btn" 
-                                    onclick="handleEDLogin('${identifiant}', '${motdepasse}', '${data.qcm.rawPropositions[index]}')"
+                                    onclick="handleEDLogin('${identifiant}', '${motdepasse}', '${apiData.qcm.rawPropositions[index]}')"
                                     style="margin-top: 8px; width:100%; justify-content:center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-surface); flex-shrink: 0;">
                                 ${prop}
                             </button>
                         `).join('');
 
                         container.innerHTML = `
-                            <h3 style="font-size: 13px; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant);">${data.qcm.question}</h3>
+                            <h3 style="font-size: 13px; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant);">${apiData.qcm.question}</h3>
 							<div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding: 4px; border-radius: 8px;">
                                 ${buttonsHtml}
                             </div>
@@ -984,10 +1038,59 @@
                     return;
                 }
 
-                if (data.status === 'SUCCESS') {
-                    userSession = data;
+                if (apiData.status === 'SUCCESS') {
+                    userSession = apiData;
                     isLoggedOut = false;
                     tempAuth = {};
+
+                    // --- Synchronisation des notes EcoleDirecte ---
+                    if (apiData.notes && Array.isArray(apiData.notes)) {
+                        // On ne garde que les notes fantômes existantes
+                        data.subjects.forEach(subject => {
+                            subject.notes = subject.notes.filter(n => n.ghost);
+                        });
+
+                        apiData.notes.forEach(edNote => {
+                            // On ignore les notes non numériques
+                            const valString = (edNote.valeur || "").replace(',', '.');
+                            const val = parseFloat(valString);
+                            if (isNaN(val)) return;
+
+                            const max = parseFloat((edNote.noteSur || "").replace(',', '.')) || 20;
+                            const coef = parseFloat(edNote.coef) === 0 ? 1 : (parseFloat(edNote.coef) || 1);
+
+                            let subject = matchSubject(edNote.libelleMatiere);
+
+                            if (!subject) {
+                                // Création d'une nouvelle matière si non trouvée
+                                const id = normalizeString(edNote.libelleMatiere) + '-' + generateId();
+                                subject = {
+                                    id,
+                                    name: edNote.libelleMatiere,
+                                    coef: 1,
+                                    notes: [],
+                                    isDefault: false
+                                };
+                                data.subjects.push(subject);
+                            }
+
+                            subject.notes.push({
+                                id: generateId(),
+                                value: val,
+                                max: max,
+                                coef: coef,
+                                ghost: false,
+                                date: edNote.date || new Date().toISOString()
+                            });
+                        });
+
+                        // Supprimer les matières vides (ni importées, ni fantômes)
+                        data.subjects = data.subjects.filter(s => s.notes.length > 0);
+
+                        saveData();
+                        updateAll();
+                    }
+                    // --- Fin de synchronisation ---
 
                     updateProfileUI();
                     
@@ -998,7 +1101,7 @@
                     triggerConfetti();
                     hapticFeedback();
                 } else {
-                    throw new Error(data.message || 'Erreur inconnue');
+                    throw new Error(apiData.message || 'Erreur inconnue');
                 }
 
             } catch (err) {
