@@ -110,6 +110,7 @@
             let totalCoef = 0;
             
             notes.forEach(note => {
+                if (typeof note.value !== 'number') return;
                 const normalized = (note.value / note.max) * 20;
                 totalWeighted += normalized * note.coef;
                 totalCoef += note.coef;
@@ -127,6 +128,7 @@
                     subject.notes.forEach(note => {
                         if (!includeGhost && note.ghost) return;
                         if (atDate && note.date && note.date.split('T')[0] > atDate) return;
+                        if (typeof note.value !== 'number') return;
 
                         const noteSur20 = (note.value / note.max) * 20;
                         const doubleCoef = note.coef * subject.coef;
@@ -349,10 +351,12 @@
         }
 
         function renderNote(subjectId, note) {
+            const isNumeric = typeof note.value === 'number';
+            const valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
             return `
                 <div class="note-item ${note.ghost ? 'ghost' : ''}" data-note="${note.id}">
                     <div class="note-info">
-                        <span class="note-value">${note.value}/${note.max}</span>
+                        <span class="note-value">${valueDisplay}</span>
                         <span class="note-details">Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}</span>
                     </div>
                     <div class="note-actions">
@@ -682,9 +686,11 @@
             const note = subject.notes.find(n => n.id === editingNote.noteId);
             if (!note) return;
             
-            note.value = parseFloat(document.getElementById('edit-note-value').value);
-            note.max = parseFloat(document.getElementById('edit-note-max').value);
-            note.coef = parseFloat(document.getElementById('edit-note-coef').value);
+            const val = parseFloat(document.getElementById('edit-note-value').value);
+            if (!isNaN(val)) note.value = val;
+
+            note.max = parseFloat(document.getElementById('edit-note-max').value) || 20;
+            note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
             note.ghost = document.getElementById('edit-ghost-checkbox').classList.contains('checked');
             
             saveData();
@@ -866,7 +872,12 @@
                 doc.text(`Coefficient ${subject.coef} - Moyenne: ${subjectAvg !== null ? subjectAvg.toFixed(2) : '--'}`, 20, y + 6);
                 
                 if (subject.notes.length > 0) {
-                    const notesText = subject.notes.map(n => `${n.value}/${n.max}${n.ghost ? ' (sim)' : ''}`).join(', ');
+                    const notesText = subject.notes.map(n => {
+                        if (typeof n.value === 'number') {
+                            return `${n.value}/${n.max}${n.ghost ? ' (sim)' : ''}`;
+                        }
+                        return n.value;
+                    }).join(', ');
                     doc.setFontSize(9);
                     doc.text(`Notes: ${notesText}`, 25, y + 11);
                     doc.setFontSize(11);
@@ -1065,10 +1076,11 @@
                         });
 
                         apiData.notes.forEach(edNote => {
-                            // On ignore les notes non numériques
-                            const valString = (edNote.valeur || "").replace(',', '.');
-                            const val = parseFloat(valString);
-                            if (isNaN(val)) return;
+                            const valString = (edNote.valeur || "").trim();
+                            if (valString === "") return;
+
+                            const val = parseFloat(valString.replace(',', '.'));
+                            const storedValue = isNaN(val) ? valString : val;
 
                             const max = parseFloat((edNote.noteSur || "").replace(',', '.')) || 20;
                             const coef = parseFloat(edNote.coef) === 0 ? 1 : (parseFloat(edNote.coef) || 1);
@@ -1090,7 +1102,7 @@
 
                             subject.notes.push({
                                 id: generateId(),
-                                value: val,
+                                value: storedValue,
                                 max: max,
                                 coef: coef,
                                 ghost: false,
