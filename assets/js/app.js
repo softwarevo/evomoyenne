@@ -118,13 +118,16 @@
             return totalCoef > 0 ? totalWeighted / totalCoef : null;
         }
 
-        function calculateGeneralAverage() {
+        function calculateGeneralAverage(includeGhost = true, atDate = null) {
             let totalWeightedPoints = 0;
             let totalWeightedCoefs = 0;
 
             data.subjects.forEach(subject => {
                 if (subject.notes && subject.notes.length > 0) {
                     subject.notes.forEach(note => {
+                        if (!includeGhost && note.ghost) return;
+                        if (atDate && note.date && note.date.split('T')[0] > atDate) return;
+
                         const noteSur20 = (note.value / note.max) * 20;
                         const doubleCoef = note.coef * subject.coef;
                 
@@ -153,14 +156,27 @@
             return new Date().toISOString().split('T')[0];
         }
 
-        function saveHistory() {
-            const today = getTodayKey();
-            const avg = calculateGeneralAverage();
+        function rebuildHistory() {
+            const allDates = new Set();
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    if (!note.ghost && note.date) {
+                        const d = note.date.split('T')[0];
+                        allDates.add(d);
+                    }
+                });
+            });
+
+            const sortedDates = Array.from(allDates).sort();
+            data.history = {};
             
-            if (avg !== null) {
-                data.history[today] = parseFloat(avg.toFixed(2));
-                saveData();
-            }
+            sortedDates.forEach(date => {
+                const avg = calculateGeneralAverage(false, date);
+                if (avg !== null) {
+                    data.history[date] = parseFloat(avg.toFixed(2));
+                }
+            });
+            saveData();
         }
 
         function getEvolution() {
@@ -223,7 +239,6 @@
             }
             
             updateTargetProgress();
-            saveHistory();
         }
 
         function updateTargetProgress() {
@@ -506,16 +521,12 @@
                 return (typeof val === 'object' && val !== null) ? val.generale : val;
             });
 
-            const allHistoryValues = Object.values(data.history).map(v => 
-                (typeof v === 'object' && v !== null) ? v.generale : v
-            );
-
-            if (allHistoryValues.length > 0) {
-                const absoluteMin = Math.min(...allHistoryValues);
-                const absoluteMax = Math.max(...allHistoryValues);
+            if (chartData.length > 0) {
+                const visibleMin = Math.min(...chartData);
+                const visibleMax = Math.max(...chartData);
         
-                evolutionChart.options.scales.y.min = Math.floor(absoluteMin - 0.5);
-                evolutionChart.options.scales.y.max = Math.ceil(absoluteMax + 0.5);
+                evolutionChart.options.scales.y.min = Math.floor(visibleMin - 1);
+                evolutionChart.options.scales.y.max = Math.ceil(visibleMax + 1);
             } else {
                 evolutionChart.options.scales.y.min = 0;
                 evolutionChart.options.scales.y.max = 20;
@@ -973,6 +984,7 @@
         }
 
         function updateAll() {
+            rebuildHistory();
             updateAverageDisplay();
             updateTopFlop();
             updateSubjectSelect();
@@ -1089,7 +1101,6 @@
                         // Supprimer les matières vides (ni importées, ni fantômes)
                         data.subjects = data.subjects.filter(s => s.notes.length > 0);
 
-                        saveData();
                         updateAll();
                     }
                     // --- Fin de synchronisation ---
