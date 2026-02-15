@@ -990,7 +990,6 @@
 
         // ==================== ECOLEDIRECTE BRIDGE ====================
         async function handleEDLogin(identifiant, motdepasse, qcmResponse = null) {
-			const BRIDGE_KEY = "evoMoyenne_permanent_key";
             const loginBtn = document.getElementById('login-submit-btn');
             const container = document.querySelector('.login-container');
             
@@ -1013,10 +1012,7 @@
                 const response = await fetch('https://ed.api.evomoyenne.qzz.io/', {
                     method: 'POST',
 					mode: 'cors',
-                    headers: {
-						'Content-Type': 'application/json'
-					    'X-Bridge-Auth': BRIDGE_KEY
-					},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
