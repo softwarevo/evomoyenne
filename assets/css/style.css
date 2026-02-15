@@ -733,19 +733,25 @@ body {
     border-bottom: none;
 }
 
-/* Ghost notes */
-.note-item.ghost {
+/* Ghost & Hidden notes */
+.note-item.ghost, .note-item.hidden-note {
     opacity: 0.5;
 }
 
 .note-item.ghost .note-value,
-.note-item.ghost .note-details {
+.note-item.ghost .note-details,
+.note-item.hidden-note .note-value,
+.note-item.hidden-note .note-details {
     font-style: italic;
 }
 
-.note-item.ghost .note-value::after {
+.note-item.pure-ghost .note-value::after {
     content: ' 👻';
     font-style: normal;
+}
+
+.strikethrough {
+    text-decoration: line-through;
 }
 
 .note-info {
