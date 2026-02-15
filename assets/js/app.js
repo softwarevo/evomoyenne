@@ -33,7 +33,26 @@
         }
 
         function saveData() {
-            localStorage.setItem('evoMoyenne', JSON.stringify(data));
+            const cleanData = JSON.parse(JSON.stringify(data));
+            cleanData.subjects.forEach(subject => {
+                subject.notes = subject.notes.filter(n => !n.ghost || n.originalValue !== undefined);
+
+                subject.notes.forEach(n => {
+                    if (n.originalValue !== undefined) {
+                        n.value = n.originalValue;
+                        n.max = n.originalMax;
+                        n.coef = n.originalCoef;
+                        n.ghost = false;
+                        delete n.originalValue;
+                        delete n.originalMax;
+                        delete n.originalCoef;
+                    }
+                    if (n.hidden) {
+                        n.hidden = false;
+                    }
+                });
+            });
+            localStorage.setItem('evoMoyenne', JSON.stringify(cleanData));
         }
 
         function generateId() {
@@ -103,7 +122,9 @@
 
         // ==================== CALCULATIONS ====================
         function calculateSubjectAverage(subject, includeGhost = true) {
-            const notes = includeGhost ? subject.notes : subject.notes.filter(n => !n.ghost);
+            let notes = subject.notes.filter(n => !n.hidden);
+            if (!includeGhost) notes = notes.filter(n => !n.ghost);
+
             if (notes.length === 0) return null;
             
             let totalWeighted = 0;
@@ -126,6 +147,7 @@
             data.subjects.forEach(subject => {
                 if (subject.notes && subject.notes.length > 0) {
                     subject.notes.forEach(note => {
+                        if (note.hidden) return;
                         if (!includeGhost && note.ghost) return;
                         if (atDate && note.date && note.date.split('T')[0] > atDate) return;
                         if (typeof note.value !== 'number') return;
@@ -325,11 +347,6 @@
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                ${!subject.isDefault ? `
-                                    <button class="subject-delete-btn" onclick="deleteSubject('${subject.id}')" title="Supprimer">
-                                        <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
-                                    </button>
-                                ` : ''}
                                 <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')">${avg !== null ? avg.toFixed(2) : '--'}</div>
                             </div>
                         </div>
@@ -353,18 +370,37 @@
         function renderNote(subjectId, note) {
             const isNumeric = typeof note.value === 'number';
             const valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+
+            const isModified = note.originalValue !== undefined;
+            const isHidden = note.hidden;
+
+            let details = `Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}`;
+            if (isModified) {
+                details += ` (Original: ${note.originalValue}/${note.originalMax})`;
+            }
+
+            const isPureGhost = note.ghost && !isModified;
+            const itemClass = (note.ghost || isHidden) ? 'ghost' : '';
+            const ghostClass = isPureGhost ? 'pure-ghost' : '';
+            const hiddenClass = isHidden ? 'hidden-note' : '';
+            const infoClass = isHidden ? 'strikethrough' : '';
+
+            const actionIcon = isPureGhost ? 'delete' : (isHidden ? 'visibility' : 'visibility_off');
+            const actionTitle = isPureGhost ? 'Supprimer' : (isHidden ? 'Afficher' : 'Masquer');
+            const actionClass = isPureGhost ? 'delete' : 'hide-note';
+
             return `
-                <div class="note-item ${note.ghost ? 'ghost' : ''}" data-note="${note.id}">
-                    <div class="note-info">
+                <div class="note-item ${itemClass} ${ghostClass} ${hiddenClass}" data-note="${note.id}">
+                    <div class="note-info ${infoClass}">
                         <span class="note-value">${valueDisplay}</span>
-                        <span class="note-details">Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}</span>
+                        <span class="note-details">${details}</span>
                     </div>
                     <div class="note-actions">
                         <button class="note-action-btn" onclick="editNote('${subjectId}', '${note.id}')" title="Modifier">
                             <span class="material-symbols-rounded">edit</span>
                         </button>
-                        <button class="note-action-btn delete" onclick="deleteNote('${subjectId}', '${note.id}')" title="Supprimer">
-                            <span class="material-symbols-rounded">delete</span>
+                        <button class="note-action-btn ${actionClass}" onclick="deleteNote('${subjectId}', '${note.id}')" title="${actionTitle}">
+                            <span class="material-symbols-rounded">${actionIcon}</span>
                         </button>
                     </div>
                 </div>
@@ -584,80 +620,39 @@
             updateAll();
             
             document.getElementById('note-value').value = '';
-            document.getElementById('note-max').value = currentMax;
+            document.getElementById('note-max').value = max;
             document.getElementById('note-coef').value = '1';
-            document.getElementById('note-subject').value = currentSubject;
+            document.getElementById('note-subject').value = subjectId;
             document.getElementById('note-value').focus();
                 
             hapticFeedback();
             showSnackbar('Note ajoutée !');
         }
 
-        function addSubject() {
-            const name = document.getElementById('new-subject-name').value.trim();
-            const coef = parseFloat(document.getElementById('new-subject-coef').value) || 1;
-            
-            if (!name) {
-                showSnackbar('Entre un nom de matière');
-                return;
-            }
-            
-            const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + generateId();
-            
-            data.subjects.push({
-                id,
-                name,
-                coef,
-                notes: [],
-                isDefault: false
-            });
-            
-            saveData();
-            updateAll();
-            
-            document.getElementById('new-subject-name').value = '';
-            document.getElementById('new-subject-coef').value = '1';
-            
-            hapticFeedback();
-            showSnackbar('Matière créée !');
-        }
-
-        function deleteSubject(subjectId) {
-            const subject = data.subjects.find(s => s.id === subjectId);
-            if (!subject || subject.isDefault) return;
-            
-            if (confirm(`Supprimer la matière "${subject.name}" et toutes ses notes ?`)) {
-                data.subjects = data.subjects.filter(s => s.id !== subjectId);
-                saveData();
-                updateAll();
-                hapticFeedback();
-                showSnackbar('Matière supprimée');
-            }
-        }
 
         function deleteNote(subjectId, noteId) {
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
             
-            subject.notes = subject.notes.filter(n => n.id !== noteId);
-            saveData();
-            updateAll();
-            hapticFeedback();
-            showSnackbar('Note supprimée');
-        }
-
-        function toggleNoteGhost(subjectId, noteId) {
-            const subject = data.subjects.find(s => s.id === subjectId);
-            if (!subject) return;
-            
             const note = subject.notes.find(n => n.id === noteId);
             if (!note) return;
+
+            const isModified = note.originalValue !== undefined;
+            const canDelete = note.ghost && !isModified;
+
+            if (canDelete) {
+                subject.notes = subject.notes.filter(n => n.id !== noteId);
+                showSnackbar('Note supprimée');
+            } else {
+                note.hidden = !note.hidden;
+                showSnackbar(note.hidden ? 'Note masquée' : 'Note affichée');
+            }
             
-            note.ghost = !note.ghost;
             saveData();
             updateAll();
             hapticFeedback();
         }
+
 
         let editingNote = null;
 
@@ -674,6 +669,9 @@
             document.getElementById('edit-note-max').value = note.max;
             document.getElementById('edit-note-coef').value = note.coef;
             
+            const ghostCheckbox = document.getElementById('edit-ghost-checkbox');
+            if (ghostCheckbox) ghostCheckbox.classList.add('checked');
+
             document.getElementById('edit-dialog').classList.add('visible');
         }
 
@@ -686,12 +684,18 @@
             const note = subject.notes.find(n => n.id === editingNote.noteId);
             if (!note) return;
             
+            if (!note.ghost && note.originalValue === undefined) {
+                note.originalValue = note.value;
+                note.originalMax = note.max;
+                note.originalCoef = note.coef;
+            }
+
             const val = parseFloat(document.getElementById('edit-note-value').value);
             if (!isNaN(val)) note.value = val;
 
             note.max = parseFloat(document.getElementById('edit-note-max').value) || 20;
             note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
-            note.ghost = document.getElementById('edit-ghost-checkbox').classList.contains('checked');
+            note.ghost = true;
             
             saveData();
             updateAll();
@@ -708,11 +712,6 @@
             list.innerHTML = data.subjects.map(s => `
                 <div class="dialog-coef-item">
                     <div class="dialog-coef-name">
-                        ${!s.isDefault ? `
-                            <button class="dialog-delete-btn" onclick="deleteSubjectFromDialog('${s.id}')" title="Supprimer">
-                                <span class="material-symbols-rounded" style="font-size: 16px;">delete</span>
-                            </button>
-                        ` : ''}
                         <span>${s.name}</span>
                     </div>
                     <input type="number" class="dialog-coef-input" data-subject="${s.id}" value="${s.coef}" min="0.1" max="20" step="0.1">
@@ -720,20 +719,6 @@
             `).join('');
             
             document.getElementById('coef-dialog').classList.add('visible');
-        }
-
-        function deleteSubjectFromDialog(subjectId) {
-            const subject = data.subjects.find(s => s.id === subjectId);
-            if (!subject || subject.isDefault) return;
-            
-            if (confirm(`Supprimer la matière "${subject.name}" et toutes ses notes ?`)) {
-                data.subjects = data.subjects.filter(s => s.id !== subjectId);
-                saveData();
-                updateAll();
-                openCoefDialog();
-                hapticFeedback();
-                showSnackbar('Matière supprimée');
-            }
         }
 
         function saveCoefs() {
@@ -1149,13 +1134,20 @@
 
         // ==================== EVENT LISTENERS ====================
         function initEventListeners() {
+            window.addEventListener('beforeunload', (e) => {
+                const hasGhostNotes = data.subjects.some(s => s.notes.some(n => n.ghost || n.hidden));
+                if (hasGhostNotes) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => switchPage(item.dataset.page));
             });
             
             document.getElementById('add-note-btn').addEventListener('click', addNote);
             
-            document.getElementById('add-subject-btn').addEventListener('click', addSubject);
             
             document.getElementById('target-input').addEventListener('change', function() {
                 data.target = parseFloat(this.value) || 14;
