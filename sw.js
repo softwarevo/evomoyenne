@@ -1,4 +1,4 @@
-const CACHE_NAME = 'evomoyenne-v1.1-refreshtest12';
+const CACHE_NAME = 'evomoyenne-v1.1-refreshtest13';
 const ASSETS = [
     './',
     './index.html',
