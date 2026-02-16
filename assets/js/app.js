@@ -18,13 +18,33 @@
             subjects: [],
             history: {},
             target: 20,
-            theme: 'dark'
+            theme: 'dark',
+            auth: {
+                token: null,
+                '2faToken': null,
+                deviceUUID: null,
+                accountId: null,
+                identifiant: null,
+                motdepasse: null
+            }
         };
 
         function loadData() {
             const saved = localStorage.getItem('evoMoyenne');
             if (saved) {
-                data = { ...data, ...JSON.parse(saved) };
+                const parsed = JSON.parse(saved);
+                data = { ...data, ...parsed };
+                // Ensure auth object exists even in old saves
+                if (!data.auth) {
+                    data.auth = {
+                        token: null,
+                        '2faToken': null,
+                        deviceUUID: null,
+                        accountId: null,
+                        identifiant: null,
+                        motdepasse: null
+                    };
+                }
             } else {
                 data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
             }
@@ -493,6 +513,16 @@
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', () => {
                     isLoggedOut = true;
+                    userSession = null;
+                    data.auth = {
+                        token: null,
+                        '2faToken': null,
+                        deviceUUID: null,
+                        accountId: null,
+                        identifiant: null,
+                        motdepasse: null
+                    };
+                    saveData();
                     updateProfileUI();
                     hapticFeedback();
                 });
@@ -989,19 +1019,50 @@
         }
 
         // ==================== ECOLEDIRECTE BRIDGE ====================
-        async function handleEDLogin(identifiant, motdepasse, qcmResponse = null) {
+        async function checkAutoLogin() {
+            if (data.auth && (data.auth.token || (data.auth.identifiant && data.auth.motdepasse))) {
+                isLoggedOut = false;
+                updateProfileUI();
+                handleEDLogin(data.auth.identifiant, data.auth.motdepasse, null, true);
+            }
+        }
+
+        async function handleEDLogin(identifiant, motdepasse, qcmResponse = null, isSilent = false) {
             const loginBtn = document.getElementById('login-submit-btn');
             const container = document.querySelector('.login-container');
+            const profileAvatar = document.querySelector('.profile-avatar');
+
+            if (!navigator.onLine) {
+                document.body.classList.add('is-offline');
+                if (!isSilent) showSnackbar('Pas de connexion internet ☁️');
+                return;
+            } else {
+                document.body.classList.remove('is-offline');
+            }
             
-            if (loginBtn) {
-                loginBtn.disabled = true;
-                loginBtn.textContent = 'Connexion...';
+            if (isSilent) {
+                if (profileAvatar) profileAvatar.classList.add('syncing');
+            } else {
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                    loginBtn.textContent = 'Connexion...';
+                }
             }
 
             const payload = {
                 identifiant: identifiant,
                 motdepasse: motdepasse
             };
+
+            // Include stored tokens if available
+            if (data.auth && data.auth.token) {
+                payload.tokens = {
+                    token: data.auth.token,
+                    '2faToken': data.auth['2faToken'],
+                    deviceUUID: data.auth.deviceUUID,
+                    accountId: data.auth.accountId
+                };
+            }
 
             if (qcmResponse) {
                 payload.qcmResponse = qcmResponse;
@@ -1030,7 +1091,8 @@
                         tokens: {
                             token: apiData.token,
                             '2faToken': apiData['2faToken'],
-                            deviceUUID: apiData.deviceUUID
+                            deviceUUID: apiData.deviceUUID,
+                            accountId: apiData.accountId
                         }
                     };
 
@@ -1059,6 +1121,15 @@
                     userSession = apiData;
                     isLoggedOut = false;
                     tempAuth = {};
+
+                    // Update persistent auth data
+                    data.auth.token = apiData.token || data.auth.token;
+                    data.auth['2faToken'] = apiData['2faToken'] || data.auth['2faToken'];
+                    data.auth.deviceUUID = apiData.deviceUUID || data.auth.deviceUUID;
+                    data.auth.accountId = apiData.accountId || data.auth.accountId;
+                    data.auth.identifiant = identifiant;
+                    data.auth.motdepasse = motdepasse;
+                    saveData();
 
                     // --- Synchronisation des notes EcoleDirecte ---
                     if (apiData.notes && Array.isArray(apiData.notes)) {
@@ -1114,8 +1185,10 @@
                     const dropdown = document.getElementById('profile-dropdown');
                     if (dropdown) dropdown.classList.remove('visible');
                     
-                    showSnackbar(`Salut ${userSession.identity.prenom} ! 👋`);
-                    triggerConfetti();
+                    if (!isSilent) {
+                        showSnackbar(`Salut ${userSession.identity.prenom} ! 👋`);
+                        triggerConfetti();
+                    }
                     hapticFeedback();
                 } else {
                     throw new Error(apiData.message || 'Erreur inconnue');
@@ -1123,15 +1196,30 @@
 
             } catch (err) {
                 console.error(err);
-                showSnackbar('Erreur : ' + (err.message || 'Connexion échouée'));
-                
-                updateProfileUI(); 
-                
-                setTimeout(() => {
-                    const dropdown = document.getElementById('profile-dropdown');
-                    if (dropdown) dropdown.classList.add('visible');
-                }, 100);
+                if (isSilent) {
+                    if (navigator.onLine) {
+                        showSnackbar('Session expirée, reconnecte-toi 👀');
+                        isLoggedOut = true;
+                        updateProfileUI();
+
+                        setTimeout(() => {
+                            const dropdown = document.getElementById('profile-dropdown');
+                            if (dropdown) dropdown.classList.add('visible');
+                        }, 500);
+                    } else {
+                        showSnackbar('Synchro impossible (Hors-ligne)');
+                    }
+                } else {
+                    showSnackbar('Erreur : ' + (err.message || 'Connexion échouée'));
+                    updateProfileUI();
+
+                    setTimeout(() => {
+                        const dropdown = document.getElementById('profile-dropdown');
+                        if (dropdown) dropdown.classList.add('visible');
+                    }, 100);
+                }
             } finally {
+                if (profileAvatar) profileAvatar.classList.remove('syncing');
                 if (loginBtn) {
                     loginBtn.disabled = false;
                     loginBtn.textContent = 'Valider';
@@ -1141,6 +1229,9 @@
 
         // ==================== EVENT LISTENERS ====================
         function initEventListeners() {
+            window.addEventListener('online', () => document.body.classList.remove('is-offline'));
+            window.addEventListener('offline', () => document.body.classList.add('is-offline'));
+
             window.addEventListener('beforeunload', (e) => {
                 const hasGhostNotes = data.subjects.some(s => s.notes.some(n => n.ghost || n.hidden));
                 if (hasGhostNotes) {
@@ -1342,4 +1433,5 @@ function showUpdateBanner() {
             initShareDialog();
             initChart();
             updateAll();
+            checkAutoLogin();
         });
