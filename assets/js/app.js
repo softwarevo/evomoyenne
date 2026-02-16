@@ -1016,22 +1016,29 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (response.status === 401) throw new Error('Identifiants invalides');
-                if (response.status === 500) throw new Error('Réponse invalide');
-
                 const apiData = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) throw new Error('Identifiants invalides');
+                    throw new Error(apiData.error || 'Réponse invalide');
+                }
 
                 if (apiData.status === '2FA_REQUIRED') {
                     tempAuth = {
                         identifiant,
                         motdepasse,
-                        tokens: apiData.tokens
+                        tokens: {
+                            token: apiData.token,
+                            '2faToken': apiData['2faToken'],
+                            deviceUUID: apiData.deviceUUID
+                        }
                     };
 
                     if (container) {
                         const buttonsHtml = apiData.qcm.propositions.map((prop, index) => `
                             <button class="add-btn challenge-btn" 
                                     onclick="handleEDLogin('${identifiant}', '${motdepasse}', '${apiData.qcm.rawPropositions[index]}')"
+                                    data-raw="${apiData.qcm.rawPropositions[index]}"
                                     style="margin-top: 8px; width:100%; justify-content:center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-surface); flex-shrink: 0;">
                                 ${prop}
                             </button>
