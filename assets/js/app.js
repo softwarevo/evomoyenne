@@ -470,11 +470,12 @@
                     </div>
                 `;
             } else {
+                const fullName = userSession ? (userSession.identity.prenom + ' ' + userSession.identity.nom).trim() : '';
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
                         <span class="material-symbols-rounded">person</span>
                     </div>
-                    <span class="profile-name">${userSession ? userSession.identity.prenom + ' ' + userSession.identity.nom : 'Utilisateur'}</span>
+                    <span class="profile-name">${fullName || 'Utilisateur'}</span>
                 `;
 
                 dropdown.innerHTML = `
