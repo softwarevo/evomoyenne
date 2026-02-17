@@ -1,6 +1,6 @@
 importScripts('./assets/js/idb.js');
 
-const CACHE_NAME = 'evomoyenne-v1.1-indexeddb-v2';
+const CACHE_NAME = 'evomoyenne-v1.1-indexeddb-v3';
 const ASSETS = [
     './',
     './index.html',
@@ -44,7 +44,7 @@ self.addEventListener('periodicsync', event => {
 
 async function backgroundCheck() {
     try {
-        const db = await idb.openDB('evoMoyenne', 2, {
+        const db = await idb.openDB('evoMoyenne', 3, {
             upgrade(db, oldVersion) {
                 if (oldVersion < 1) {
                     db.createObjectStore('notes', { keyPath: 'id' });
@@ -55,6 +55,11 @@ async function backgroundCheck() {
                     }
                     if (!db.objectStoreNames.contains('subjects')) {
                         db.createObjectStore('subjects', { keyPath: 'id' });
+                    }
+                }
+                if (oldVersion < 3) {
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings');
                     }
                 }
             },
