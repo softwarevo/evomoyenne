@@ -25,7 +25,8 @@
                 deviceUUID: null,
                 accountId: null,
                 identifiant: null,
-                motdepasse: null
+                motdepasse: null,
+                identity: { prenom: null, nom: null }
             }
         };
 
@@ -48,8 +49,11 @@
                         deviceUUID: null,
                         accountId: null,
                         identifiant: null,
-                        motdepasse: null
+                        motdepasse: null,
+                        identity: { prenom: null, nom: null }
                     };
+                } else if (!data.auth.identity) {
+                    data.auth.identity = { prenom: null, nom: null };
                 }
             } else {
                 data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
@@ -466,7 +470,9 @@
                     </div>
                 `;
             } else {
-                const fullName = userSession ? (userSession.identity.prenom + ' ' + userSession.identity.nom).trim() : '';
+                const prenom = userSession?.identity?.prenom || data.auth?.identity?.prenom || '';
+                const nom = userSession?.identity?.nom || data.auth?.identity?.nom || '';
+                const fullName = (prenom + ' ' + nom).trim();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
                         <span class="material-symbols-rounded">person</span>
@@ -1126,6 +1132,14 @@
                     data.auth.accountId = apiData.accountId || data.auth.accountId;
                     data.auth.identifiant = identifiant;
                     data.auth.motdepasse = motdepasse;
+
+                    if (apiData.identity) {
+                        data.auth.identity = {
+                            prenom: apiData.identity.prenom || data.auth.identity.prenom,
+                            nom: apiData.identity.nom || data.auth.identity.nom
+                        };
+                    }
+
                     saveData();
 
                     // --- Synchronisation des notes EcoleDirecte ---
