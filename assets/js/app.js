@@ -101,7 +101,23 @@
             }
         }
 
+        async function clearAllData() {
+            try {
+                const db = await dbPromise;
+                const tx = db.transaction(['subjects', 'auth', 'settings', 'notes'], 'readwrite');
+                await tx.objectStore('subjects').clear();
+                await tx.objectStore('auth').clear();
+                await tx.objectStore('settings').clear();
+                await tx.objectStore('notes').clear();
+                await tx.done;
+                localStorage.clear();
+            } catch (err) {
+                console.error("Error clearing all data:", err);
+            }
+        }
+
         async function saveData() {
+            if (isDontSaveMode) return;
             try {
                 const db = await dbPromise;
                 const tx = db.transaction(['subjects', 'auth', 'settings'], 'readwrite');
@@ -205,6 +221,7 @@
 
         // ==================== STATE MANAGEMENT ====================
         let isLoggedOut = true;
+        let isDontSaveMode = false;
         let userSession = null;
         let tempAuth = {};
 
@@ -542,6 +559,15 @@
             }
         }
 
+        function updateSettingsDialog() {
+            const checkbox = document.getElementById('dont-save-checkbox');
+            if (isDontSaveMode) {
+                checkbox.classList.add('checked');
+            } else {
+                checkbox.classList.remove('checked');
+            }
+        }
+
         function updateProfileUI() {
             const profileBtn = document.getElementById('profile-trigger');
             const dropdown = document.getElementById('profile-dropdown');
@@ -566,8 +592,26 @@
                         <div class="form-group">
                             <input type="password" class="form-input small-input" placeholder="Mot de passe">
                         </div>
+                        <div class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;">
+                            <div class="checkbox-m3 checked" id="remember-me-checkbox">
+                                <span class="material-symbols-rounded filled">check</span>
+                            </div>
+                            <label class="ghost-toggle-label" style="font-size: 13px; cursor: pointer;">Souvenez-vous de moi</label>
+                        </div>
+                        <div id="remember-me-disclaimer" style="display: none; font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; margin-bottom: 4px; padding-left: 32px; line-height: 1.2;">
+                            Vous pouvez désactiver cette option dans les paramètres
+                        </div>
                         <button class="add-btn" id="login-submit-btn">
                             Valider
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="menu-about-btn">
+                            <span class="material-symbols-rounded">info</span>
+                            À propos
+                        </button>
+                        <button class="dropdown-item" id="menu-settings-btn">
+                            <span class="material-symbols-rounded">settings</span>
+                            Paramètres
                         </button>
                     </div>
                 `;
@@ -587,11 +631,11 @@
                         <span class="material-symbols-rounded">${data.theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
                         <span id="theme-label">${data.theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}</span>
                     </button>
-                    <button class="dropdown-item">
+                    <button class="dropdown-item" id="menu-about-btn">
                         <span class="material-symbols-rounded">info</span>
                         À propos
                     </button>
-                    <button class="dropdown-item">
+                    <button class="dropdown-item" id="menu-settings-btn">
                         <span class="material-symbols-rounded">settings</span>
                         Paramètres
                     </button>
@@ -603,15 +647,37 @@
                 `;
         
                 hideLoginTip();
-                attachMenuListeners();
             }
+            attachMenuListeners();
         }
 
         function attachMenuListeners() {
             const themeToggle = document.getElementById('menu-theme-toggle');
             if (themeToggle) {
-                themeToggle.addEventListener('click', () => {
+                themeToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     toggleTheme();
+                });
+            }
+
+            const aboutBtn = document.getElementById('menu-about-btn');
+            if (aboutBtn) {
+                aboutBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('about-dialog').classList.add('visible');
+                    document.getElementById('profile-dropdown').classList.remove('visible');
+                    hapticFeedback();
+                });
+            }
+
+            const settingsBtn = document.getElementById('menu-settings-btn');
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateSettingsDialog();
+                    document.getElementById('settings-dialog').classList.add('visible');
+                    document.getElementById('profile-dropdown').classList.remove('visible');
+                    hapticFeedback();
                 });
             }
     
@@ -1504,7 +1570,7 @@
                         }
                     });
         
-                    profileDropdown.addEventListener('click', (e) => {
+                    profileDropdown.addEventListener('click', async (e) => {
                         if (e.target.id === 'login-submit-btn') {
                             const inputs = profileDropdown.querySelectorAll('input');
                             const id = inputs[0].value.trim();
@@ -1514,7 +1580,24 @@
                                 showSnackbar('Il manque un truc là... 👀');
                                 return;
                             }
+
+                            const rememberCheckbox = document.getElementById('remember-me-checkbox');
+                            if (rememberCheckbox && !rememberCheckbox.classList.contains('checked')) {
+                                isDontSaveMode = true;
+                                await clearAllData();
+                            } else {
+                                isDontSaveMode = false;
+                            }
+
                             handleEDLogin(id, pass);
+                        }
+                        const rememberToggle = e.target.closest('#remember-me-toggle');
+                        if (rememberToggle) {
+                            const checkbox = rememberToggle.querySelector('.checkbox-m3');
+                            const disclaimer = document.getElementById('remember-me-disclaimer');
+                            const isChecked = checkbox.classList.toggle('checked');
+                            if (disclaimer) disclaimer.style.display = isChecked ? 'none' : 'block';
+                            hapticFeedback();
                         }
                         const challengeBtn = e.target.closest('.challenge-btn');
                         if (challengeBtn) {
@@ -1549,6 +1632,36 @@
             });
             
             document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+
+            document.getElementById('close-about-dialog').addEventListener('click', () => {
+                document.getElementById('about-dialog').classList.remove('visible');
+            });
+
+            document.getElementById('about-dialog').addEventListener('click', (e) => {
+                if (e.target.id === 'about-dialog') {
+                    document.getElementById('about-dialog').classList.remove('visible');
+                }
+            });
+
+            document.getElementById('close-settings-dialog').addEventListener('click', () => {
+                document.getElementById('settings-dialog').classList.remove('visible');
+            });
+
+            document.getElementById('settings-dialog').addEventListener('click', (e) => {
+                if (e.target.id === 'settings-dialog') {
+                    document.getElementById('settings-dialog').classList.remove('visible');
+                }
+            });
+
+            document.getElementById('dont-save-toggle').addEventListener('click', async () => {
+                const checkbox = document.getElementById('dont-save-checkbox');
+                isDontSaveMode = checkbox.classList.toggle('checked');
+                if (isDontSaveMode) {
+                    await clearAllData();
+                    showSnackbar('Données locales supprimées');
+                }
+                hapticFeedback();
+            });
                 
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
                 applyTheme(e.matches ? 'dark' : 'light');
