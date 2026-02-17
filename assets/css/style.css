@@ -1258,6 +1258,46 @@ body {
     position: relative;
 }
 
+/* Login Tip Bubble */
+.login-tip {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    line-height: 1.4;
+    z-index: 90;
+    width: 220px;
+    box-shadow: 0 4px 12px var(--md-sys-color-shadow);
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
+}
+
+.login-tip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 22px;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid var(--md-sys-color-primary-container);
+}
+
+.login-tip b {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.login-tip.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+}
+
 .profile-btn {
     display: flex;
     align-items: center;

@@ -327,7 +327,7 @@
         }
 
         // ==================== UI UPDATES ====================
-        function updateAverageDisplay() {
+        function updateAverageDisplay(suppressConfetti = false) {
             const avg = calculateGeneralAverage();
             const avgEl = document.getElementById('average-value');
             const evolutionEl = document.getElementById('average-evolution');
@@ -337,7 +337,7 @@
                 const oldAvg = parseFloat(avgEl.textContent) || 0;
                 avgEl.textContent = avg.toFixed(2);
                 
-                if (oldAvg > 0 && avg > oldAvg) {
+                if (oldAvg > 0 && avg > oldAvg && !suppressConfetti) {
                     triggerConfetti();
                 }
             } else {
@@ -525,6 +525,23 @@
             notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
         }
 
+        function showLoginTip() {
+            const tip = document.getElementById('login-tip');
+            const dropdown = document.getElementById('profile-dropdown');
+            const isMenuOpen = dropdown && dropdown.classList.contains('visible');
+
+            if (tip && isLoggedOut && !isMenuOpen) {
+                tip.classList.remove('hidden');
+            }
+        }
+
+        function hideLoginTip() {
+            const tip = document.getElementById('login-tip');
+            if (tip) {
+                tip.classList.add('hidden');
+            }
+        }
+
         function updateProfileUI() {
             const profileBtn = document.getElementById('profile-trigger');
             const dropdown = document.getElementById('profile-dropdown');
@@ -532,6 +549,7 @@
             if (!profileBtn || !dropdown) return;
 
             if (isLoggedOut) {
+                showLoginTip();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
                         <span class="material-symbols-rounded">login</span>
@@ -584,6 +602,7 @@
                     </button>
                 `;
         
+                hideLoginTip();
                 attachMenuListeners();
             }
         }
@@ -1109,9 +1128,9 @@
             }, 3000);
         }
 
-        function updateAll() {
+        function updateAll(suppressConfetti = false) {
             rebuildHistory();
-            updateAverageDisplay();
+            updateAverageDisplay(suppressConfetti);
             updateTopFlop();
             updateSubjectSelect();
             updateSubjectsList();
@@ -1349,7 +1368,7 @@
                             edSubjectIds.has(s.id)
                         );
 
-                        updateAll();
+                        updateAll(isSilent);
                     }
                     // --- Fin de synchronisation ---
 
@@ -1468,7 +1487,12 @@
 
                     profileTrigger.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        profileDropdown.classList.toggle('visible');
+                        const isVisible = profileDropdown.classList.toggle('visible');
+                        if (isVisible) {
+                            hideLoginTip();
+                        } else {
+                            showLoginTip();
+                        }
                         hapticFeedback();
                     });
 
@@ -1476,6 +1500,7 @@
                         const wrapper = document.querySelector('.profile-wrapper');
                         if (wrapper && !wrapper.contains(e.target)) {
                             profileDropdown.classList.remove('visible');
+                            showLoginTip();
                         }
                     });
         
