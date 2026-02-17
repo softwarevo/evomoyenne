@@ -83,11 +83,11 @@
                             <span class="material-symbols-rounded">dark_mode</span>
                             <span id="theme-label">Mode Clair</span>
                         </button>
-                        <button class="dropdown-item">
+                        <button class="dropdown-item" id="menu-about-btn">
                             <span class="material-symbols-rounded">info</span>
                             À propos
                         </button>
-                        <button class="dropdown-item">
+                        <button class="dropdown-item" id="menu-settings-btn">
                             <span class="material-symbols-rounded">settings</span>
                             Paramètres
                         </button>
@@ -265,6 +265,39 @@
             <div class="dialog-actions">
                 <button class="dialog-btn dialog-btn-secondary" id="close-coef-dialog">Annuler</button>
                 <button class="dialog-btn dialog-btn-primary" id="save-coef-dialog">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="about-dialog">
+        <div class="dialog">
+            <h2 class="dialog-title">À propos</h2>
+            <div class="dialog-content">
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                <p style="margin-top: 16px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Version 1.1</p>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn dialog-btn-primary" id="close-about-dialog">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="settings-dialog">
+        <div class="dialog">
+            <h2 class="dialog-title">Paramètres</h2>
+            <div class="dialog-content">
+                <div class="ghost-toggle" id="dont-save-toggle" style="padding: 12px 0; cursor: pointer;">
+                    <div class="checkbox-m3" id="dont-save-checkbox">
+                        <span class="material-symbols-rounded filled">check</span>
+                    </div>
+                    <label class="ghost-toggle-label" style="cursor: pointer;">Ne pas enregistrer de données localement</label>
+                </div>
+                <p style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">
+                    Si cette option est activée, aucune donnée ne sera sauvegardée dans votre navigateur. Tout sera perdu à la fermeture de l'onglet.
+                </p>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn dialog-btn-primary" id="close-settings-dialog">Fermer</button>
             </div>
         </div>
     </div>
