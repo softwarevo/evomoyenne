@@ -30,10 +30,18 @@
             }
         };
 
-        const dbPromise = idb.openDB('evoMoyenne', 1, {
-            upgrade(db) {
-                if (!db.objectStoreNames.contains('notes')) {
+        const dbPromise = idb.openDB('evoMoyenne', 2, {
+            upgrade(db, oldVersion) {
+                if (oldVersion < 1) {
                     db.createObjectStore('notes', { keyPath: 'id' });
+                }
+                if (oldVersion < 2) {
+                    if (!db.objectStoreNames.contains('auth')) {
+                        db.createObjectStore('auth');
+                    }
+                    if (!db.objectStoreNames.contains('subjects')) {
+                        db.createObjectStore('subjects', { keyPath: 'id' });
+                    }
                 }
             },
         });
@@ -92,6 +100,15 @@
                 }))
             };
             localStorage.setItem('evoMoyenne', JSON.stringify(cleanData));
+
+            // Save subjects to IndexedDB for SW access
+            dbPromise.then(db => {
+                const tx = db.transaction('subjects', 'readwrite');
+                tx.store.clear();
+                data.subjects.forEach(s => {
+                    tx.store.put({ ...s, notes: [] });
+                });
+            }).catch(err => console.error("Error saving subjects to IDB:", err));
         }
 
         function generateId(prefix = '') {
@@ -561,6 +578,7 @@
                         motdepasse: null
                     };
                     saveData();
+                    dbPromise.then(db => db.delete('auth', 'credentials')).catch(() => {});
                     updateProfileUI();
                     hapticFeedback();
                 });
@@ -1068,6 +1086,26 @@
             updateChart();
         }
 
+        async function registerPeriodicSync() {
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+
+                if (Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+
+                if ('periodicSync' in registration) {
+                    try {
+                        await registration.periodicSync.register('check-grades', {
+                            minInterval: 60 * 60 * 1000,
+                        });
+                    } catch (err) {
+                        console.warn('Periodic sync registration failed:', err);
+                    }
+                }
+            }
+        }
+
         // ==================== ECOLEDIRECTE BRIDGE ====================
         async function checkAutoLogin() {
             if (data.auth && (data.auth.token || (data.auth.identifiant && data.auth.motdepasse))) {
@@ -1188,6 +1226,20 @@
                     }
 
                     saveData();
+
+                    // Save credentials to IndexedDB for Service Worker
+                    dbPromise.then(db => {
+                        db.put('auth', {
+                            identifiant,
+                            motdepasse,
+                            token: data.auth.token,
+                            '2faToken': data.auth['2faToken'],
+                            deviceUUID: data.auth.deviceUUID,
+                            accountId: data.auth.accountId
+                        }, 'credentials');
+                    }).catch(err => console.error("Error saving auth to IDB:", err));
+
+                    registerPeriodicSync();
 
                     // --- Synchronisation des notes EcoleDirecte ---
                     if (apiData.notes && Array.isArray(apiData.notes)) {
