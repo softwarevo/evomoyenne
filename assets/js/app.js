@@ -30,7 +30,7 @@
             }
         };
 
-        const dbPromise = idb.openDB('evoMoyenne', 2, {
+        const dbPromise = idb.openDB('evoMoyenne', 3, {
             upgrade(db, oldVersion) {
                 if (oldVersion < 1) {
                     db.createObjectStore('notes', { keyPath: 'id' });
@@ -43,72 +43,104 @@
                         db.createObjectStore('subjects', { keyPath: 'id' });
                     }
                 }
+                if (oldVersion < 3) {
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings');
+                    }
+                }
             },
         });
 
         async function loadData() {
-            const saved = localStorage.getItem('evoMoyenne');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                data = { ...data, ...parsed };
-
-                // Instant removal of any saved grades for privacy
-                if (data.subjects) {
-                    data.subjects.forEach(s => s.notes = []);
-                }
-
-                // Ensure auth object exists even in old saves
-                if (!data.auth) {
-                    data.auth = {
-                        token: null,
-                        '2faToken': null,
-                        deviceUUID: null,
-                        accountId: null,
-                        identifiant: null,
-                        motdepasse: null,
-                        identity: { prenom: null, nom: null }
-                    };
-                } else if (!data.auth.identity) {
-                    data.auth.identity = { prenom: null, nom: null };
-                }
-            } else {
-                data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
-            }
-
-            // Load notes from IndexedDB
             try {
                 const db = await dbPromise;
+
+                // Load settings
+                const settings = await db.get('settings', 'app');
+                if (settings) {
+                    data.target = settings.target ?? 20;
+                    data.theme = settings.theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                    data.history = settings.history ?? {};
+                } else {
+                    data.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                // Load auth profile
+                const authProfile = await db.get('auth', 'profile');
+                if (authProfile) {
+                    data.auth = { ...data.auth, ...authProfile };
+                }
+                if (!data.auth.identity) {
+                    data.auth.identity = { prenom: null, nom: null };
+                }
+
+                // Load subjects
+                const subjects = await db.getAll('subjects');
+                if (subjects && subjects.length > 0) {
+                    data.subjects = subjects;
+                } else {
+                    data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
+                }
+
+                // Load notes
                 const allNotes = await db.getAll('notes');
                 data.subjects.forEach(subject => {
                     subject.notes = allNotes.filter(n => n.subjectId === subject.id);
                 });
-            } catch (err) {
-                console.error("Failed to load notes from IndexedDB", err);
-            }
 
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            applyTheme(systemTheme);
+                // Update UI elements
+                document.getElementById('target-input').value = data.target;
+                applyTheme(data.theme);
+
+            } catch (err) {
+                console.error("Failed to load data from IndexedDB", err);
+                // Fallback to defaults
+                data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                applyTheme(systemTheme);
+            }
         }
 
-        function saveData() {
-            // No notes are persisted in localStorage for privacy and volume
-            const cleanData = {
-                ...data,
-                subjects: data.subjects.map(s => ({
-                    ...s,
-                    notes: []
-                }))
-            };
-            localStorage.setItem('evoMoyenne', JSON.stringify(cleanData));
+        async function saveData() {
+            try {
+                const db = await dbPromise;
+                const tx = db.transaction(['subjects', 'auth', 'settings'], 'readwrite');
 
-            // Save subjects to IndexedDB for SW access
-            dbPromise.then(db => {
-                const tx = db.transaction('subjects', 'readwrite');
-                tx.store.clear();
-                data.subjects.forEach(s => {
-                    tx.store.put({ ...s, notes: [] });
-                });
-            }).catch(err => console.error("Error saving subjects to IDB:", err));
+                // Save subjects to IndexedDB for SW access
+                const subjectsStore = tx.objectStore('subjects');
+                await subjectsStore.clear();
+                for (const s of data.subjects) {
+                    await subjectsStore.put({ ...s, notes: [] });
+                }
+
+                // Save auth profile
+                await tx.objectStore('auth').put(data.auth, 'profile');
+
+                // Keep 'credentials' for SW compatibility
+                if (data.auth.identifiant || data.auth.token) {
+                    await tx.objectStore('auth').put({
+                        identifiant: data.auth.identifiant,
+                        motdepasse: data.auth.motdepasse,
+                        token: data.auth.token,
+                        '2faToken': data.auth['2faToken'],
+                        deviceUUID: data.auth.deviceUUID,
+                        accountId: data.auth.accountId
+                    }, 'credentials');
+                } else {
+                    await tx.objectStore('auth').delete('credentials');
+                }
+
+                // Save settings
+                await tx.objectStore('settings').put({
+                    target: data.target,
+                    theme: data.theme,
+                    history: data.history
+                }, 'app');
+
+                await tx.done;
+            } catch (err) {
+                console.error("Error saving data to IDB:", err);
+            }
         }
 
         function generateId(prefix = '') {
@@ -566,7 +598,7 @@
     
             const logoutBtn = document.getElementById('logout-btn');
             if (logoutBtn) {
-                logoutBtn.addEventListener('click', () => {
+                logoutBtn.addEventListener('click', async () => {
                     isLoggedOut = true;
                     userSession = null;
                     data.auth = {
@@ -575,10 +607,10 @@
                         deviceUUID: null,
                         accountId: null,
                         identifiant: null,
-                        motdepasse: null
+                        motdepasse: null,
+                        identity: { prenom: null, nom: null }
                     };
-                    saveData();
-                    dbPromise.then(db => db.delete('auth', 'credentials')).catch(() => {});
+                    await saveData();
                     updateProfileUI();
                     hapticFeedback();
                 });
@@ -1225,19 +1257,7 @@
                         };
                     }
 
-                    saveData();
-
-                    // Save credentials to IndexedDB for Service Worker
-                    dbPromise.then(db => {
-                        db.put('auth', {
-                            identifiant,
-                            motdepasse,
-                            token: data.auth.token,
-                            '2faToken': data.auth['2faToken'],
-                            deviceUUID: data.auth.deviceUUID,
-                            accountId: data.auth.accountId
-                        }, 'credentials');
-                    }).catch(err => console.error("Error saving auth to IDB:", err));
+                    await saveData();
 
                     registerPeriodicSync();
 
@@ -1401,7 +1421,7 @@
             
             
             document.getElementById('target-input').addEventListener('change', function() {
-                data.target = parseFloat(this.value) || 14;
+                data.target = parseFloat(this.value) || 20;
                 saveData();
                 updateTargetProgress();
             });
