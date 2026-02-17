@@ -1404,6 +1404,50 @@ body {
     font-size: 14px;
 }
 
+/* Syncing indicator */
+.syncing {
+    position: relative;
+}
+
+.syncing::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--md-sys-color-on-surface);
+    animation: pulse-glow 1.5s infinite;
+}
+
+@keyframes pulse-glow {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Offline indicator */
+.offline-badge {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container-highest);
+    padding: 4px 8px;
+    border-radius: 12px;
+    opacity: 0.8;
+}
+
+.offline-badge .material-symbols-rounded {
+    font-size: 14px;
+}
+
+body.is-offline .offline-badge {
+    display: flex;
+}
+
 .dropdown-menu {
     transform-origin: top right;
     transition: 
