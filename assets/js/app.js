@@ -159,13 +159,17 @@
         function calculateGeneralAverage(includeGhost = true, atDate = null) {
             let totalWeightedPoints = 0;
             let totalWeightedCoefs = 0;
+            const atDateTime = atDate ? new Date(atDate).getTime() : null;
 
             data.subjects.forEach(subject => {
                 if (subject.notes && subject.notes.length > 0) {
                     subject.notes.forEach(note => {
                         if (note.hidden) return;
                         if (!includeGhost && note.ghost) return;
-                        if (atDate && note.date && note.date.split('T')[0] > atDate) return;
+                        if (atDateTime && note.date) {
+                            const noteDate = new Date(note.date.split('T')[0]).getTime();
+                            if (noteDate > atDateTime) return;
+                        }
                         if (typeof note.value !== 'number') return;
 
                         const noteSur20 = (note.value / note.max) * 20;
@@ -211,7 +215,8 @@
                 });
             });
 
-            const sortedDates = Array.from(allDates).sort();
+            // Tri robuste par date
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
             data.history = {};
             
             sortedDates.forEach(date => {
@@ -234,7 +239,8 @@
                 });
             });
 
-            const sortedDates = Array.from(allDates).sort();
+            // Tri robuste par date
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
             if (sortedDates.length < 2) return null;
 
             // La "dernière note" correspond au groupe de notes de la date la plus récente
