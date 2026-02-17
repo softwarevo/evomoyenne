@@ -34,6 +34,12 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 data = { ...data, ...parsed };
+
+                // Instant removal of any saved grades for privacy
+                if (data.subjects) {
+                    data.subjects.forEach(s => s.notes = []);
+                }
+
                 // Ensure auth object exists even in old saves
                 if (!data.auth) {
                     data.auth = {
@@ -55,22 +61,8 @@
         function saveData() {
             const cleanData = JSON.parse(JSON.stringify(data));
             cleanData.subjects.forEach(subject => {
-                subject.notes = subject.notes.filter(n => !n.ghost || n.originalValue !== undefined);
-
-                subject.notes.forEach(n => {
-                    if (n.originalValue !== undefined) {
-                        n.value = n.originalValue;
-                        n.max = n.originalMax;
-                        n.coef = n.originalCoef;
-                        n.ghost = false;
-                        delete n.originalValue;
-                        delete n.originalMax;
-                        delete n.originalCoef;
-                    }
-                    if (n.hidden) {
-                        n.hidden = false;
-                    }
-                });
+                // No notes are persisted in localStorage
+                subject.notes = [];
             });
             localStorage.setItem('evoMoyenne', JSON.stringify(cleanData));
         }
@@ -201,6 +193,10 @@
         }
 
         function rebuildHistory() {
+            // If no real notes are present, we don't rebuild history to avoid clearing persisted data
+            const hasRealNotes = data.subjects.some(s => s.notes.some(n => !n.ghost));
+            if (!hasRealNotes) return;
+
             const allDates = new Set();
             data.subjects.forEach(subject => {
                 subject.notes.forEach(note => {
