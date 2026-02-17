@@ -159,13 +159,17 @@
         function calculateGeneralAverage(includeGhost = true, atDate = null) {
             let totalWeightedPoints = 0;
             let totalWeightedCoefs = 0;
+            const atDateTime = atDate ? new Date(atDate).getTime() : null;
 
             data.subjects.forEach(subject => {
                 if (subject.notes && subject.notes.length > 0) {
                     subject.notes.forEach(note => {
                         if (note.hidden) return;
                         if (!includeGhost && note.ghost) return;
-                        if (atDate && note.date && note.date.split('T')[0] > atDate) return;
+                        if (atDateTime && note.date) {
+                            const noteDate = new Date(note.date.split('T')[0]).getTime();
+                            if (noteDate > atDateTime) return;
+                        }
                         if (typeof note.value !== 'number') return;
 
                         const noteSur20 = (note.value / note.max) * 20;
@@ -211,7 +215,8 @@
                 });
             });
 
-            const sortedDates = Array.from(allDates).sort();
+            // Tri robuste par date
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
             data.history = {};
             
             sortedDates.forEach(date => {
@@ -224,20 +229,27 @@
         }
 
         function getEvolution() {
-            const keys = Object.keys(data.history).sort();
-            if (keys.length < 2) return null;
-            
-            const today = keys[keys.length - 1];
-            const yesterday = keys[keys.length - 2];
-            
-            let current = data.history[today];
-            let previous = data.history[yesterday];
-            
-            if (typeof current === 'object' && current !== null) current = current.generale;
-            if (typeof previous === 'object' && previous !== null) previous = previous.generale;
-            
-            if (current && previous) {
-                return current - previous;
+            // Collecte toutes les dates uniques des notes réelles non cachées
+            const allDates = new Set();
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    if (!note.ghost && !note.hidden && note.date) {
+                        allDates.add(note.date.split('T')[0]);
+                    }
+                });
+            });
+
+            // Tri robuste par date
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+            if (sortedDates.length < 2) return null;
+
+            // La "dernière note" correspond au groupe de notes de la date la plus récente
+            // On compare la moyenne actuelle réelle à la moyenne réelle avant cette date
+            const currentAvg = calculateGeneralAverage(false);
+            const previousAvg = calculateGeneralAverage(false, sortedDates[sortedDates.length - 2]);
+
+            if (currentAvg !== null && previousAvg !== null) {
+                return currentAvg - previousAvg;
             }
             return null;
         }
@@ -263,7 +275,7 @@
             const evolution = getEvolution();
             if (evolution !== null) {
                 const sign = evolution >= 0 ? '+' : '';
-                evolutionText.textContent = `${sign}${evolution.toFixed(2)} vs hier`;
+                evolutionText.textContent = `${sign}${evolution.toFixed(2)} depuis dernière note`;
                 evolutionEl.className = 'average-evolution';
                 const icon = evolutionEl.querySelector('.material-symbols-rounded');
                 
