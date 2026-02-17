@@ -30,7 +30,15 @@
             }
         };
 
-        function loadData() {
+        const dbPromise = idb.openDB('evoMoyenne', 1, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains('notes')) {
+                    db.createObjectStore('notes', { keyPath: 'id' });
+                }
+            },
+        });
+
+        async function loadData() {
             const saved = localStorage.getItem('evoMoyenne');
             if (saved) {
                 const parsed = JSON.parse(saved);
@@ -58,21 +66,36 @@
             } else {
                 data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
             }
+
+            // Load notes from IndexedDB
+            try {
+                const db = await dbPromise;
+                const allNotes = await db.getAll('notes');
+                data.subjects.forEach(subject => {
+                    subject.notes = allNotes.filter(n => n.subjectId === subject.id);
+                });
+            } catch (err) {
+                console.error("Failed to load notes from IndexedDB", err);
+            }
+
             const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             applyTheme(systemTheme);
         }
 
         function saveData() {
-            const cleanData = JSON.parse(JSON.stringify(data));
-            cleanData.subjects.forEach(subject => {
-                // No notes are persisted in localStorage
-                subject.notes = [];
-            });
+            // No notes are persisted in localStorage for privacy and volume
+            const cleanData = {
+                ...data,
+                subjects: data.subjects.map(s => ({
+                    ...s,
+                    notes: []
+                }))
+            };
             localStorage.setItem('evoMoyenne', JSON.stringify(cleanData));
         }
 
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        function generateId(prefix = '') {
+            return prefix + Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
         function normalizeString(str) {
@@ -632,7 +655,7 @@
         }
 
         // ==================== ACTIONS ====================
-        function addNote() {
+        async function addNote() {
             const subjectId = document.getElementById('note-subject').value;
             const value = parseFloat(document.getElementById('note-value').value);
             const max = parseFloat(document.getElementById('note-max').value) || 20;
@@ -652,15 +675,21 @@
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
             
-            subject.notes.push({
-                id: generateId(),
+            const newNote = {
+                id: generateId('simu-'),
+                subjectId: subjectId,
                 value,
                 max,
                 coef,
                 ghost: isGhost,
                 date: new Date().toISOString()
-            });
+            };
+
+            subject.notes.push(newNote);
             
+            const db = await dbPromise;
+            await db.put('notes', newNote);
+
             saveData();
             updateAll();
             
@@ -675,7 +704,7 @@
         }
 
 
-        function deleteNote(subjectId, noteId) {
+        async function deleteNote(subjectId, noteId) {
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
             
@@ -685,11 +714,14 @@
             const isModified = note.originalValue !== undefined;
             const canDelete = note.ghost && !isModified;
 
+            const db = await dbPromise;
             if (canDelete) {
                 subject.notes = subject.notes.filter(n => n.id !== noteId);
+                await db.delete('notes', noteId);
                 showSnackbar('Note supprimée');
             } else {
                 note.hidden = !note.hidden;
+                await db.put('notes', note);
                 showSnackbar(note.hidden ? 'Note masquée' : 'Note affichée');
             }
             
@@ -720,7 +752,7 @@
             document.getElementById('edit-dialog').classList.add('visible');
         }
 
-        function saveEdit() {
+        async function saveEdit() {
             if (!editingNote) return;
             
             const subject = data.subjects.find(s => s.id === editingNote.subjectId);
@@ -742,6 +774,9 @@
             note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
             note.ghost = true;
             
+            const db = await dbPromise;
+            await db.put('notes', note);
+
             saveData();
             updateAll();
             
@@ -1156,25 +1191,25 @@
 
                     // --- Synchronisation des notes EcoleDirecte ---
                     if (apiData.notes && Array.isArray(apiData.notes)) {
-                        // On ne garde que les notes fantômes existantes
-                        data.subjects.forEach(subject => {
-                            subject.notes = subject.notes.filter(n => n.ghost);
-                        });
+                        const db = await dbPromise;
+                        const allLocalNotes = await db.getAll('notes');
+                        const localRealNotes = allLocalNotes.filter(n => !n.id.startsWith('simu-'));
 
-                        apiData.notes.forEach(edNote => {
+                        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+                        const notesToPut = [];
+                        const seenLocalIds = new Set();
+
+                        edNotes.forEach(edNote => {
                             const valString = (edNote.valeur || "").trim();
-                            if (valString === "") return;
-
                             const val = parseFloat(valString.replace(',', '.'));
                             const storedValue = isNaN(val) ? valString : val;
-
                             const max = parseFloat((edNote.noteSur || "").replace(',', '.')) || 20;
                             const coef = parseFloat(edNote.coef) === 0 ? 1 : (parseFloat(edNote.coef) || 1);
+                            const edId = edNote.id.toString();
 
                             let subject = matchSubject(edNote.libelleMatiere);
 
                             if (!subject) {
-                                // Création d'une nouvelle matière si non trouvée
                                 const id = normalizeString(edNote.libelleMatiere) + '-' + generateId();
                                 subject = {
                                     id,
@@ -1186,18 +1221,61 @@
                                 data.subjects.push(subject);
                             }
 
-                            subject.notes.push({
-                                id: generateId(),
+                            const newNoteData = {
+                                id: edId,
+                                subjectId: subject.id,
                                 value: storedValue,
                                 max: max,
                                 coef: coef,
                                 ghost: false,
-                                date: edNote.date || new Date().toISOString()
-                            });
+                                date: edNote.date || new Date().toISOString(),
+                                title: edNote.devoir || ""
+                            };
+
+                            const existing = localRealNotes.find(n => n.id === edId);
+                            if (!existing) {
+                                notesToPut.push(newNoteData);
+                            } else {
+                                seenLocalIds.add(edId);
+                                // Compare data (value, date, title)
+                                if (existing.value !== newNoteData.value ||
+                                    existing.date !== newNoteData.date ||
+                                    existing.title !== newNoteData.title ||
+                                    existing.max !== newNoteData.max ||
+                                    existing.coef !== newNoteData.coef) {
+
+                                    // Preserve local properties like 'hidden' during update
+                                    const mergedNote = {
+                                        ...newNoteData,
+                                        hidden: existing.hidden || false
+                                    };
+                                    notesToPut.push(mergedNote);
+                                }
+                            }
                         });
 
-                        // Supprimer les matières vides (ni importées, ni fantômes)
-                        data.subjects = data.subjects.filter(s => s.notes.length > 0);
+                        const notesToDelete = localRealNotes
+                            .filter(n => !seenLocalIds.has(n.id))
+                            .map(n => n.id);
+
+                        const tx = db.transaction('notes', 'readwrite');
+                        for (const note of notesToPut) tx.store.put(note);
+                        for (const id of notesToDelete) tx.store.delete(id);
+                        await tx.done;
+
+                        // Rafraîchir l'état mémoire
+                        const finalNotes = await db.getAll('notes');
+                        data.subjects.forEach(s => {
+                            s.notes = finalNotes.filter(n => n.subjectId === s.id);
+                        });
+
+                        // Nettoyage des matières disparues de l'API (et qui n'ont plus de notes locales)
+                        const edSubjectIds = new Set(edNotes.map(n => matchSubject(n.libelleMatiere)?.id).filter(id => id));
+                        data.subjects = data.subjects.filter(s =>
+                            s.isDefault ||
+                            s.notes.length > 0 ||
+                            edSubjectIds.has(s.id)
+                        );
 
                         updateAll();
                     }
@@ -1450,8 +1528,8 @@ function showUpdateBanner() {
 }
 
         // ==================== INIT ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadData();
             initEventListeners();
             initShareDialog();
             initChart();

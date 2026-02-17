@@ -1,8 +1,9 @@
-const CACHE_NAME = 'evomoyenne-v1.1-refreshtest15';
+const CACHE_NAME = 'evomoyenne-v1.1-indexeddb-v1';
 const ASSETS = [
     './',
     './index.html',
     './assets/css/style.css',
+    './assets/js/idb.js',
     './assets/js/app.js',
     './manifest.webmanifest'
 ];
