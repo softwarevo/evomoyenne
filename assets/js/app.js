@@ -224,20 +224,26 @@
         }
 
         function getEvolution() {
-            const keys = Object.keys(data.history).sort();
-            if (keys.length < 2) return null;
-            
-            const today = keys[keys.length - 1];
-            const yesterday = keys[keys.length - 2];
-            
-            let current = data.history[today];
-            let previous = data.history[yesterday];
-            
-            if (typeof current === 'object' && current !== null) current = current.generale;
-            if (typeof previous === 'object' && previous !== null) previous = previous.generale;
-            
-            if (current && previous) {
-                return current - previous;
+            // Collecte toutes les dates uniques des notes réelles non cachées
+            const allDates = new Set();
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    if (!note.ghost && !note.hidden && note.date) {
+                        allDates.add(note.date.split('T')[0]);
+                    }
+                });
+            });
+
+            const sortedDates = Array.from(allDates).sort();
+            if (sortedDates.length < 2) return null;
+
+            // La "dernière note" correspond au groupe de notes de la date la plus récente
+            // On compare la moyenne actuelle réelle à la moyenne réelle avant cette date
+            const currentAvg = calculateGeneralAverage(false);
+            const previousAvg = calculateGeneralAverage(false, sortedDates[sortedDates.length - 2]);
+
+            if (currentAvg !== null && previousAvg !== null) {
+                return currentAvg - previousAvg;
             }
             return null;
         }
@@ -263,7 +269,7 @@
             const evolution = getEvolution();
             if (evolution !== null) {
                 const sign = evolution >= 0 ? '+' : '';
-                evolutionText.textContent = `${sign}${evolution.toFixed(2)} vs hier`;
+                evolutionText.textContent = `${sign}${evolution.toFixed(2)} depuis dernière note`;
                 evolutionEl.className = 'average-evolution';
                 const icon = evolutionEl.querySelector('.material-symbols-rounded');
                 
