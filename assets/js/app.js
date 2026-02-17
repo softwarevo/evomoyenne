@@ -18,40 +18,225 @@
             subjects: [],
             history: {},
             target: 20,
-            theme: 'dark'
+            theme: 'dark',
+            auth: {
+                token: null,
+                '2faToken': null,
+                deviceUUID: null,
+                accountId: null,
+                identifiant: null,
+                motdepasse: null,
+                identity: { prenom: null, nom: null }
+            }
         };
 
-        function loadData() {
-            const saved = localStorage.getItem('evoMoyenne');
-            if (saved) {
-                data = { ...data, ...JSON.parse(saved) };
-            } else {
+        const dbPromise = idb.openDB('evoMoyenne', 3, {
+            upgrade(db, oldVersion) {
+                if (oldVersion < 1) {
+                    db.createObjectStore('notes', { keyPath: 'id' });
+                }
+                if (oldVersion < 2) {
+                    if (!db.objectStoreNames.contains('auth')) {
+                        db.createObjectStore('auth');
+                    }
+                    if (!db.objectStoreNames.contains('subjects')) {
+                        db.createObjectStore('subjects', { keyPath: 'id' });
+                    }
+                }
+                if (oldVersion < 3) {
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings');
+                    }
+                }
+            },
+        });
+
+        async function loadData() {
+            try {
+                const db = await dbPromise;
+
+                // Load settings
+                const settings = await db.get('settings', 'app');
+                if (settings) {
+                    data.target = settings.target ?? 20;
+                    data.theme = settings.theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                    data.history = settings.history ?? {};
+                } else {
+                    data.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                // Load auth profile
+                const authProfile = await db.get('auth', 'profile');
+                if (authProfile) {
+                    data.auth = { ...data.auth, ...authProfile };
+                }
+                if (!data.auth.identity) {
+                    data.auth.identity = { prenom: null, nom: null };
+                }
+
+                // Load subjects
+                const subjects = await db.getAll('subjects');
+                if (subjects && subjects.length > 0) {
+                    data.subjects = subjects;
+                } else {
+                    data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
+                }
+
+                // Load notes
+                const allNotes = await db.getAll('notes');
+                data.subjects.forEach(subject => {
+                    subject.notes = allNotes.filter(n => n.subjectId === subject.id);
+                });
+
+                // Update UI elements
+                document.getElementById('target-input').value = data.target;
+                applyTheme(data.theme);
+
+            } catch (err) {
+                console.error("Failed to load data from IndexedDB", err);
+                // Fallback to defaults
                 data.subjects = JSON.parse(JSON.stringify(defaultSubjects));
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                applyTheme(systemTheme);
             }
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            applyTheme(systemTheme);
         }
 
-        function saveData() {
-            localStorage.setItem('evoMoyenne', JSON.stringify(data));
+        async function clearAllData() {
+            try {
+                const db = await dbPromise;
+                const tx = db.transaction(['subjects', 'auth', 'settings', 'notes'], 'readwrite');
+                await tx.objectStore('subjects').clear();
+                await tx.objectStore('auth').clear();
+                await tx.objectStore('settings').clear();
+                await tx.objectStore('notes').clear();
+                await tx.done;
+                localStorage.clear();
+            } catch (err) {
+                console.error("Error clearing all data:", err);
+            }
         }
 
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        async function saveData() {
+            if (isDontSaveMode) return;
+            try {
+                const db = await dbPromise;
+                const tx = db.transaction(['subjects', 'auth', 'settings'], 'readwrite');
+
+                // Save subjects to IndexedDB for SW access
+                const subjectsStore = tx.objectStore('subjects');
+                await subjectsStore.clear();
+                for (const s of data.subjects) {
+                    await subjectsStore.put({ ...s, notes: [] });
+                }
+
+                // Save auth profile
+                await tx.objectStore('auth').put(data.auth, 'profile');
+
+                // Keep 'credentials' for SW compatibility
+                if (data.auth.identifiant || data.auth.token) {
+                    await tx.objectStore('auth').put({
+                        identifiant: data.auth.identifiant,
+                        motdepasse: data.auth.motdepasse,
+                        token: data.auth.token,
+                        '2faToken': data.auth['2faToken'],
+                        deviceUUID: data.auth.deviceUUID,
+                        accountId: data.auth.accountId
+                    }, 'credentials');
+                } else {
+                    await tx.objectStore('auth').delete('credentials');
+                }
+
+                // Save settings
+                await tx.objectStore('settings').put({
+                    target: data.target,
+                    theme: data.theme,
+                    history: data.history
+                }, 'app');
+
+                await tx.done;
+            } catch (err) {
+                console.error("Error saving data to IDB:", err);
+            }
+        }
+
+        function generateId(prefix = '') {
+            return prefix + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function normalizeString(str) {
+            return str.toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9&]/g, '');
+        }
+
+        function matchSubject(edName) {
+            const normalizedEd = normalizeString(edName);
+
+            const mapping = {
+                'mathematiques': 'maths',
+                'maths': 'maths',
+                'francais': 'francais',
+                'histoiregeographie': 'histoire',
+                'histoiregeo': 'histoire',
+                'anglaislv1': 'anglais',
+                'anglaislv2': 'anglais',
+                'anglais': 'anglais',
+                'allemandlv2': 'lv2',
+                'espagnollv2': 'lv2',
+                'allemand': 'lv2',
+                'espagnol': 'lv2',
+                'physiquechimie': 'physique',
+                'sciencesvieetterre': 'svt',
+				'sciencesvie&terre': 'svt',
+                'svt': 'svt',
+                'technologie': 'techno',
+                'techno': 'techno',
+                'educationphysiqueetsportive': 'eps',
+				'edphysique&sport': 'eps',
+                'eps': 'eps',
+                'artsplastiques': 'art',
+                'artplastique': 'art',
+                'educationmusicale': 'musique',
+                'musique': 'musique',
+                'latin': 'latin'
+            };
+
+            for (const [key, id] of Object.entries(mapping)) {
+                if (normalizedEd === key || normalizedEd.includes(key)) {
+                    const subject = data.subjects.find(s => s.id === id);
+                    if (subject) return subject;
+                }
+            }
+
+            for (const subject of data.subjects) {
+                const normalizedSub = normalizeString(subject.name);
+                if (normalizedEd === normalizedSub || normalizedEd.includes(normalizedSub) || normalizedSub.includes(normalizedEd)) {
+                    return subject;
+                }
+            }
+
+            return null;
         }
 
         // ==================== STATE MANAGEMENT ====================
         let isLoggedOut = true;
+        let isDontSaveMode = false;
+        let userSession = null;
+        let tempAuth = {};
 
         // ==================== CALCULATIONS ====================
         function calculateSubjectAverage(subject, includeGhost = true) {
-            const notes = includeGhost ? subject.notes : subject.notes.filter(n => !n.ghost);
+            let notes = subject.notes.filter(n => !n.hidden);
+            if (!includeGhost) notes = notes.filter(n => !n.ghost);
+
             if (notes.length === 0) return null;
             
             let totalWeighted = 0;
             let totalCoef = 0;
             
             notes.forEach(note => {
+                if (typeof note.value !== 'number') return;
                 const normalized = (note.value / note.max) * 20;
                 totalWeighted += normalized * note.coef;
                 totalCoef += note.coef;
@@ -60,13 +245,22 @@
             return totalCoef > 0 ? totalWeighted / totalCoef : null;
         }
 
-        function calculateGeneralAverage() {
+        function calculateGeneralAverage(includeGhost = true, atDate = null) {
             let totalWeightedPoints = 0;
             let totalWeightedCoefs = 0;
+            const atDateTime = atDate ? new Date(atDate).getTime() : null;
 
             data.subjects.forEach(subject => {
                 if (subject.notes && subject.notes.length > 0) {
                     subject.notes.forEach(note => {
+                        if (note.hidden) return;
+                        if (!includeGhost && note.ghost) return;
+                        if (atDateTime && note.date) {
+                            const noteDate = new Date(note.date.split('T')[0]).getTime();
+                            if (noteDate > atDateTime) return;
+                        }
+                        if (typeof note.value !== 'number') return;
+
                         const noteSur20 = (note.value / note.max) * 20;
                         const doubleCoef = note.coef * subject.coef;
                 
@@ -95,37 +289,62 @@
             return new Date().toISOString().split('T')[0];
         }
 
-        function saveHistory() {
-            const today = getTodayKey();
-            const avg = calculateGeneralAverage();
+        function rebuildHistory() {
+            // If no real notes are present, we don't rebuild history to avoid clearing persisted data
+            const hasRealNotes = data.subjects.some(s => s.notes.some(n => !n.ghost));
+            if (!hasRealNotes) return;
+
+            const allDates = new Set();
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    if (!note.ghost && note.date) {
+                        const d = note.date.split('T')[0];
+                        allDates.add(d);
+                    }
+                });
+            });
+
+            // Tri robuste par date
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+            data.history = {};
             
-            if (avg !== null) {
-                data.history[today] = parseFloat(avg.toFixed(2));
-                saveData();
-            }
+            sortedDates.forEach(date => {
+                const avg = calculateGeneralAverage(false, date);
+                if (avg !== null) {
+                    data.history[date] = parseFloat(avg.toFixed(2));
+                }
+            });
+            saveData();
         }
 
         function getEvolution() {
-            const keys = Object.keys(data.history).sort();
-            if (keys.length < 2) return null;
-            
-            const today = keys[keys.length - 1];
-            const yesterday = keys[keys.length - 2];
-            
-            let current = data.history[today];
-            let previous = data.history[yesterday];
-            
-            if (typeof current === 'object' && current !== null) current = current.generale;
-            if (typeof previous === 'object' && previous !== null) previous = previous.generale;
-            
-            if (current && previous) {
-                return current - previous;
+            // Collecte toutes les dates uniques des notes réelles non cachées
+            const allDates = new Set();
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    if (!note.ghost && !note.hidden && note.date) {
+                        allDates.add(note.date.split('T')[0]);
+                    }
+                });
+            });
+
+            // Tri robuste par date
+            const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+            if (sortedDates.length < 2) return null;
+
+            // La "dernière note" correspond au groupe de notes de la date la plus récente
+            // On compare la moyenne actuelle réelle à la moyenne réelle avant cette date
+            const currentAvg = calculateGeneralAverage(false);
+            const previousAvg = calculateGeneralAverage(false, sortedDates[sortedDates.length - 2]);
+
+            if (currentAvg !== null && previousAvg !== null) {
+                return currentAvg - previousAvg;
             }
             return null;
         }
 
         // ==================== UI UPDATES ====================
-        function updateAverageDisplay() {
+        function updateAverageDisplay(suppressConfetti = false) {
             const avg = calculateGeneralAverage();
             const avgEl = document.getElementById('average-value');
             const evolutionEl = document.getElementById('average-evolution');
@@ -135,7 +354,7 @@
                 const oldAvg = parseFloat(avgEl.textContent) || 0;
                 avgEl.textContent = avg.toFixed(2);
                 
-                if (oldAvg > 0 && avg > oldAvg) {
+                if (oldAvg > 0 && avg > oldAvg && !suppressConfetti) {
                     triggerConfetti();
                 }
             } else {
@@ -145,7 +364,7 @@
             const evolution = getEvolution();
             if (evolution !== null) {
                 const sign = evolution >= 0 ? '+' : '';
-                evolutionText.textContent = `${sign}${evolution.toFixed(2)} vs hier`;
+                evolutionText.textContent = `${sign}${evolution.toFixed(2)} depuis dernière note`;
                 evolutionEl.className = 'average-evolution';
                 const icon = evolutionEl.querySelector('.material-symbols-rounded');
                 
@@ -165,7 +384,6 @@
             }
             
             updateTargetProgress();
-            saveHistory();
         }
 
         function updateTargetProgress() {
@@ -250,11 +468,6 @@
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                ${!subject.isDefault ? `
-                                    <button class="subject-delete-btn" onclick="deleteSubject('${subject.id}')" title="Supprimer">
-                                        <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
-                                    </button>
-                                ` : ''}
                                 <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')">${avg !== null ? avg.toFixed(2) : '--'}</div>
                             </div>
                         </div>
@@ -276,21 +489,39 @@
         }
 
         function renderNote(subjectId, note) {
+            const isNumeric = typeof note.value === 'number';
+            const valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+
+            const isModified = note.originalValue !== undefined;
+            const isHidden = note.hidden;
+
+            let details = `Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}`;
+            if (isModified) {
+                details += ` (Original: ${note.originalValue}/${note.originalMax})`;
+            }
+
+            const isPureGhost = note.ghost && !isModified;
+            const itemClass = (note.ghost || isHidden) ? 'ghost' : '';
+            const ghostClass = isPureGhost ? 'pure-ghost' : '';
+            const hiddenClass = isHidden ? 'hidden-note' : '';
+            const infoClass = isHidden ? 'strikethrough' : '';
+
+            const actionIcon = isPureGhost ? 'delete' : (isHidden ? 'visibility' : 'visibility_off');
+            const actionTitle = isPureGhost ? 'Supprimer' : (isHidden ? 'Afficher' : 'Masquer');
+            const actionClass = isPureGhost ? 'delete' : 'hide-note';
+
             return `
-                <div class="note-item ${note.ghost ? 'ghost' : ''}" data-note="${note.id}">
-                    <div class="note-info">
-                        <span class="note-value">${note.value}/${note.max}</span>
-                        <span class="note-details">Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}</span>
+                <div class="note-item ${itemClass} ${ghostClass} ${hiddenClass}" data-note="${note.id}">
+                    <div class="note-info ${infoClass}">
+                        <span class="note-value">${valueDisplay}</span>
+                        <span class="note-details">${details}</span>
                     </div>
                     <div class="note-actions">
-                        <button class="note-action-btn" onclick="toggleNoteGhost('${subjectId}', '${note.id}')" title="${note.ghost ? 'Rendre réelle' : 'Rendre fantôme'}">
-                            <span class="material-symbols-rounded">${note.ghost ? 'visibility' : 'visibility_off'}</span>
-                        </button>
                         <button class="note-action-btn" onclick="editNote('${subjectId}', '${note.id}')" title="Modifier">
                             <span class="material-symbols-rounded">edit</span>
                         </button>
-                        <button class="note-action-btn delete" onclick="deleteNote('${subjectId}', '${note.id}')" title="Supprimer">
-                            <span class="material-symbols-rounded">delete</span>
+                        <button class="note-action-btn ${actionClass}" onclick="deleteNote('${subjectId}', '${note.id}')" title="${actionTitle}">
+                            <span class="material-symbols-rounded">${actionIcon}</span>
                         </button>
                     </div>
                 </div>
@@ -311,6 +542,32 @@
             notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
         }
 
+        function showLoginTip() {
+            const tip = document.getElementById('login-tip');
+            const dropdown = document.getElementById('profile-dropdown');
+            const isMenuOpen = dropdown && dropdown.classList.contains('visible');
+
+            if (tip && isLoggedOut && !isMenuOpen) {
+                tip.classList.remove('hidden');
+            }
+        }
+
+        function hideLoginTip() {
+            const tip = document.getElementById('login-tip');
+            if (tip) {
+                tip.classList.add('hidden');
+            }
+        }
+
+        function updateSettingsDialog() {
+            const checkbox = document.getElementById('dont-save-checkbox');
+            if (isDontSaveMode) {
+                checkbox.classList.add('checked');
+            } else {
+                checkbox.classList.remove('checked');
+            }
+        }
+
         function updateProfileUI() {
             const profileBtn = document.getElementById('profile-trigger');
             const dropdown = document.getElementById('profile-dropdown');
@@ -318,6 +575,7 @@
             if (!profileBtn || !dropdown) return;
 
             if (isLoggedOut) {
+                showLoginTip();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
                         <span class="material-symbols-rounded">login</span>
@@ -334,17 +592,38 @@
                         <div class="form-group">
                             <input type="password" class="form-input small-input" placeholder="Mot de passe">
                         </div>
+                        <div class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;">
+                            <div class="checkbox-m3 checked" id="remember-me-checkbox">
+                                <span class="material-symbols-rounded filled">check</span>
+                            </div>
+                            <label class="ghost-toggle-label" style="font-size: 13px; cursor: pointer;">Souvenez-vous de moi</label>
+                        </div>
+                        <div id="remember-me-disclaimer" style="display: none; font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; margin-bottom: 4px; padding-left: 32px; line-height: 1.2;">
+                            Vous pouvez désactiver cette option dans les paramètres
+                        </div>
                         <button class="add-btn" id="login-submit-btn">
                             Valider
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="menu-about-btn">
+                            <span class="material-symbols-rounded">info</span>
+                            À propos
+                        </button>
+                        <button class="dropdown-item" id="menu-settings-btn">
+                            <span class="material-symbols-rounded">settings</span>
+                            Paramètres
                         </button>
                     </div>
                 `;
             } else {
+                const prenom = userSession?.identity?.prenom || data.auth?.identity?.prenom || '';
+                const nom = userSession?.identity?.nom || data.auth?.identity?.nom || '';
+                const fullName = (prenom + ' ' + nom).trim();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
                         <span class="material-symbols-rounded">person</span>
                     </div>
-                    <span class="profile-name">Prénom Nom</span>
+                    <span class="profile-name">${fullName || 'Utilisateur'}</span>
                 `;
 
                 dropdown.innerHTML = `
@@ -352,11 +631,11 @@
                         <span class="material-symbols-rounded">${data.theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
                         <span id="theme-label">${data.theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}</span>
                     </button>
-                    <button class="dropdown-item">
+                    <button class="dropdown-item" id="menu-about-btn">
                         <span class="material-symbols-rounded">info</span>
                         À propos
                     </button>
-                    <button class="dropdown-item">
+                    <button class="dropdown-item" id="menu-settings-btn">
                         <span class="material-symbols-rounded">settings</span>
                         Paramètres
                     </button>
@@ -367,22 +646,56 @@
                     </button>
                 `;
         
-                attachMenuListeners();
+                hideLoginTip();
             }
+            attachMenuListeners();
         }
 
         function attachMenuListeners() {
             const themeToggle = document.getElementById('menu-theme-toggle');
             if (themeToggle) {
-                themeToggle.addEventListener('click', () => {
+                themeToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     toggleTheme();
+                });
+            }
+
+            const aboutBtn = document.getElementById('menu-about-btn');
+            if (aboutBtn) {
+                aboutBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('about-dialog').classList.add('visible');
+                    document.getElementById('profile-dropdown').classList.remove('visible');
+                    hapticFeedback();
+                });
+            }
+
+            const settingsBtn = document.getElementById('menu-settings-btn');
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateSettingsDialog();
+                    document.getElementById('settings-dialog').classList.add('visible');
+                    document.getElementById('profile-dropdown').classList.remove('visible');
+                    hapticFeedback();
                 });
             }
     
             const logoutBtn = document.getElementById('logout-btn');
             if (logoutBtn) {
-                logoutBtn.addEventListener('click', () => {
+                logoutBtn.addEventListener('click', async () => {
                     isLoggedOut = true;
+                    userSession = null;
+                    data.auth = {
+                        token: null,
+                        '2faToken': null,
+                        deviceUUID: null,
+                        accountId: null,
+                        identifiant: null,
+                        motdepasse: null,
+                        identity: { prenom: null, nom: null }
+                    };
+                    await saveData();
                     updateProfileUI();
                     hapticFeedback();
                 });
@@ -451,16 +764,12 @@
                 return (typeof val === 'object' && val !== null) ? val.generale : val;
             });
 
-            const allHistoryValues = Object.values(data.history).map(v => 
-                (typeof v === 'object' && v !== null) ? v.generale : v
-            );
-
-            if (allHistoryValues.length > 0) {
-                const absoluteMin = Math.min(...allHistoryValues);
-                const absoluteMax = Math.max(...allHistoryValues);
+            if (chartData.length > 0) {
+                const visibleMin = Math.min(...chartData);
+                const visibleMax = Math.max(...chartData);
         
-                evolutionChart.options.scales.y.min = Math.floor(absoluteMin - 0.5);
-                evolutionChart.options.scales.y.max = Math.ceil(absoluteMax + 0.5);
+                evolutionChart.options.scales.y.min = Math.floor(visibleMin - 1);
+                evolutionChart.options.scales.y.max = Math.ceil(visibleMax + 1);
             } else {
                 evolutionChart.options.scales.y.min = 0;
                 evolutionChart.options.scales.y.max = 20;
@@ -481,12 +790,12 @@
         }
 
         // ==================== ACTIONS ====================
-        function addNote() {
+        async function addNote() {
             const subjectId = document.getElementById('note-subject').value;
             const value = parseFloat(document.getElementById('note-value').value);
             const max = parseFloat(document.getElementById('note-max').value) || 20;
             const coef = parseFloat(document.getElementById('note-coef').value) || 1;
-            const isGhost = document.getElementById('ghost-checkbox').classList.contains('checked');
+            const isGhost = true;
             
             if (!subjectId || isNaN(value)) {
                 showSnackbar('Remplis tous les champs obligatoires');
@@ -501,93 +810,61 @@
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
             
-            subject.notes.push({
-                id: generateId(),
+            const newNote = {
+                id: generateId('simu-'),
+                subjectId: subjectId,
                 value,
                 max,
                 coef,
                 ghost: isGhost,
                 date: new Date().toISOString()
-            });
+            };
+
+            subject.notes.push(newNote);
             
+            const db = await dbPromise;
+            await db.put('notes', newNote);
+
             saveData();
             updateAll();
             
             document.getElementById('note-value').value = '';
-            document.getElementById('note-max').value = currentMax;
+            document.getElementById('note-max').value = max;
             document.getElementById('note-coef').value = '1';
-            document.getElementById('note-subject').value = currentSubject;
+            document.getElementById('note-subject').value = subjectId;
             document.getElementById('note-value').focus();
                 
             hapticFeedback();
             showSnackbar('Note ajoutée !');
         }
 
-        function addSubject() {
-            const name = document.getElementById('new-subject-name').value.trim();
-            const coef = parseFloat(document.getElementById('new-subject-coef').value) || 1;
-            
-            if (!name) {
-                showSnackbar('Entre un nom de matière');
-                return;
-            }
-            
-            const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + generateId();
-            
-            data.subjects.push({
-                id,
-                name,
-                coef,
-                notes: [],
-                isDefault: false
-            });
-            
-            saveData();
-            updateAll();
-            
-            document.getElementById('new-subject-name').value = '';
-            document.getElementById('new-subject-coef').value = '1';
-            
-            hapticFeedback();
-            showSnackbar('Matière créée !');
-        }
 
-        function deleteSubject(subjectId) {
-            const subject = data.subjects.find(s => s.id === subjectId);
-            if (!subject || subject.isDefault) return;
-            
-            if (confirm(`Supprimer la matière "${subject.name}" et toutes ses notes ?`)) {
-                data.subjects = data.subjects.filter(s => s.id !== subjectId);
-                saveData();
-                updateAll();
-                hapticFeedback();
-                showSnackbar('Matière supprimée');
-            }
-        }
-
-        function deleteNote(subjectId, noteId) {
-            const subject = data.subjects.find(s => s.id === subjectId);
-            if (!subject) return;
-            
-            subject.notes = subject.notes.filter(n => n.id !== noteId);
-            saveData();
-            updateAll();
-            hapticFeedback();
-            showSnackbar('Note supprimée');
-        }
-
-        function toggleNoteGhost(subjectId, noteId) {
+        async function deleteNote(subjectId, noteId) {
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
             
             const note = subject.notes.find(n => n.id === noteId);
             if (!note) return;
+
+            const isModified = note.originalValue !== undefined;
+            const canDelete = note.ghost && !isModified;
+
+            const db = await dbPromise;
+            if (canDelete) {
+                subject.notes = subject.notes.filter(n => n.id !== noteId);
+                await db.delete('notes', noteId);
+                showSnackbar('Note supprimée');
+            } else {
+                note.hidden = !note.hidden;
+                await db.put('notes', note);
+                showSnackbar(note.hidden ? 'Note masquée' : 'Note affichée');
+            }
             
-            note.ghost = !note.ghost;
             saveData();
             updateAll();
             hapticFeedback();
         }
+
 
         let editingNote = null;
 
@@ -604,17 +881,13 @@
             document.getElementById('edit-note-max').value = note.max;
             document.getElementById('edit-note-coef').value = note.coef;
             
-            const editGhostCheckbox = document.getElementById('edit-ghost-checkbox');
-            if (note.ghost) {
-                editGhostCheckbox.classList.add('checked');
-            } else {
-                editGhostCheckbox.classList.remove('checked');
-            }
-            
+            const ghostCheckbox = document.getElementById('edit-ghost-checkbox');
+            if (ghostCheckbox) ghostCheckbox.classList.add('checked');
+
             document.getElementById('edit-dialog').classList.add('visible');
         }
 
-        function saveEdit() {
+        async function saveEdit() {
             if (!editingNote) return;
             
             const subject = data.subjects.find(s => s.id === editingNote.subjectId);
@@ -623,11 +896,22 @@
             const note = subject.notes.find(n => n.id === editingNote.noteId);
             if (!note) return;
             
-            note.value = parseFloat(document.getElementById('edit-note-value').value);
-            note.max = parseFloat(document.getElementById('edit-note-max').value);
-            note.coef = parseFloat(document.getElementById('edit-note-coef').value);
-            note.ghost = document.getElementById('edit-ghost-checkbox').classList.contains('checked');
+            if (!note.ghost && note.originalValue === undefined) {
+                note.originalValue = note.value;
+                note.originalMax = note.max;
+                note.originalCoef = note.coef;
+            }
+
+            const val = parseFloat(document.getElementById('edit-note-value').value);
+            if (!isNaN(val)) note.value = val;
+
+            note.max = parseFloat(document.getElementById('edit-note-max').value) || 20;
+            note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+            note.ghost = true;
             
+            const db = await dbPromise;
+            await db.put('notes', note);
+
             saveData();
             updateAll();
             
@@ -643,11 +927,6 @@
             list.innerHTML = data.subjects.map(s => `
                 <div class="dialog-coef-item">
                     <div class="dialog-coef-name">
-                        ${!s.isDefault ? `
-                            <button class="dialog-delete-btn" onclick="deleteSubjectFromDialog('${s.id}')" title="Supprimer">
-                                <span class="material-symbols-rounded" style="font-size: 16px;">delete</span>
-                            </button>
-                        ` : ''}
                         <span>${s.name}</span>
                     </div>
                     <input type="number" class="dialog-coef-input" data-subject="${s.id}" value="${s.coef}" min="0.1" max="20" step="0.1">
@@ -655,20 +934,6 @@
             `).join('');
             
             document.getElementById('coef-dialog').classList.add('visible');
-        }
-
-        function deleteSubjectFromDialog(subjectId) {
-            const subject = data.subjects.find(s => s.id === subjectId);
-            if (!subject || subject.isDefault) return;
-            
-            if (confirm(`Supprimer la matière "${subject.name}" et toutes ses notes ?`)) {
-                data.subjects = data.subjects.filter(s => s.id !== subjectId);
-                saveData();
-                updateAll();
-                openCoefDialog();
-                hapticFeedback();
-                showSnackbar('Matière supprimée');
-            }
         }
 
         function saveCoefs() {
@@ -807,7 +1072,12 @@
                 doc.text(`Coefficient ${subject.coef} - Moyenne: ${subjectAvg !== null ? subjectAvg.toFixed(2) : '--'}`, 20, y + 6);
                 
                 if (subject.notes.length > 0) {
-                    const notesText = subject.notes.map(n => `${n.value}/${n.max}${n.ghost ? ' (sim)' : ''}`).join(', ');
+                    const notesText = subject.notes.map(n => {
+                        if (typeof n.value === 'number') {
+                            return `${n.value}/${n.max}${n.ghost ? ' (sim)' : ''}`;
+                        }
+                        return n.value;
+                    }).join(', ');
                     doc.setFontSize(9);
                     doc.text(`Notes: ${notesText}`, 25, y + 11);
                     doc.setFontSize(11);
@@ -924,52 +1194,321 @@
             }, 3000);
         }
 
-        function updateAll() {
-            updateAverageDisplay();
+        function updateAll(suppressConfetti = false) {
+            rebuildHistory();
+            updateAverageDisplay(suppressConfetti);
             updateTopFlop();
             updateSubjectSelect();
             updateSubjectsList();
             updateChart();
         }
 
+        async function registerPeriodicSync() {
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+
+                if (Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+
+                if ('periodicSync' in registration) {
+                    try {
+                        await registration.periodicSync.register('check-grades', {
+                            minInterval: 60 * 60 * 1000,
+                        });
+                    } catch (err) {
+                        console.warn('Periodic sync registration failed:', err);
+                    }
+                }
+            }
+        }
+
+        // ==================== ECOLEDIRECTE BRIDGE ====================
+        async function checkAutoLogin() {
+            if (data.auth && (data.auth.token || (data.auth.identifiant && data.auth.motdepasse))) {
+                isLoggedOut = false;
+                updateProfileUI();
+                handleEDLogin(data.auth.identifiant, data.auth.motdepasse, null, true);
+            }
+        }
+
+        async function handleEDLogin(identifiant, motdepasse, qcmResponse = null, isSilent = false) {
+            const loginBtn = document.getElementById('login-submit-btn');
+            const container = document.querySelector('.login-container');
+            const profileAvatar = document.querySelector('.profile-avatar');
+
+            if (!navigator.onLine) {
+                document.body.classList.add('is-offline');
+                if (!isSilent) showSnackbar('Pas de connexion internet ☁️');
+                return;
+            } else {
+                document.body.classList.remove('is-offline');
+            }
+            
+            if (isSilent) {
+                if (profileAvatar) profileAvatar.classList.add('syncing');
+            } else {
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                    loginBtn.textContent = 'Connexion...';
+                }
+            }
+
+            const payload = {
+                identifiant: identifiant,
+                motdepasse: motdepasse
+            };
+
+            // Include stored tokens if available
+            if (data.auth && data.auth.token) {
+                payload.tokens = {
+                    token: data.auth.token,
+                    '2faToken': data.auth['2faToken'],
+                    deviceUUID: data.auth.deviceUUID,
+                    accountId: data.auth.accountId
+                };
+            }
+
+            if (qcmResponse) {
+                payload.qcmResponse = qcmResponse;
+                payload.tokens = tempAuth.tokens;
+            }
+
+            try {
+                const response = await fetch('https://ed.api.evomoyenne.qzz.io/', {
+                    method: 'POST',
+					mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const apiData = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) throw new Error('Identifiants invalides');
+                    throw new Error(apiData.error || 'Réponse invalide');
+                }
+
+                if (apiData.status === '2FA_REQUIRED') {
+                    tempAuth = {
+                        identifiant,
+                        motdepasse,
+                        tokens: {
+                            token: apiData.token,
+                            '2faToken': apiData['2faToken'],
+                            deviceUUID: apiData.deviceUUID,
+                            accountId: apiData.accountId
+                        }
+                    };
+
+                    if (container) {
+                        const buttonsHtml = apiData.qcm.propositions.map((prop, index) => `
+                            <button class="add-btn challenge-btn" 
+                                    onclick="handleEDLogin('${identifiant}', '${motdepasse}', '${apiData.qcm.rawPropositions[index]}')"
+                                    data-raw="${apiData.qcm.rawPropositions[index]}"
+                                    style="margin-top: 8px; width:100%; justify-content:center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-surface); flex-shrink: 0;">
+                                ${prop}
+                            </button>
+                        `).join('');
+
+                        container.innerHTML = `
+                            <h3 style="font-size: 13px; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant);">${apiData.qcm.question}</h3>
+							<div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding: 4px; border-radius: 8px;">
+                                ${buttonsHtml}
+                            </div>
+                        `;
+                    }
+                    hapticFeedback();
+                    return;
+                }
+
+                if (apiData.status === 'SUCCESS') {
+                    userSession = apiData;
+                    isLoggedOut = false;
+                    tempAuth = {};
+
+                    // Update persistent auth data
+                    data.auth.token = apiData.token || data.auth.token;
+                    data.auth['2faToken'] = apiData['2faToken'] || data.auth['2faToken'];
+                    data.auth.deviceUUID = apiData.deviceUUID || data.auth.deviceUUID;
+                    data.auth.accountId = apiData.accountId || data.auth.accountId;
+                    data.auth.identifiant = identifiant;
+                    data.auth.motdepasse = motdepasse;
+
+                    if (apiData.identity) {
+                        data.auth.identity = {
+                            prenom: apiData.identity.prenom || data.auth.identity.prenom,
+                            nom: apiData.identity.nom || data.auth.identity.nom
+                        };
+                    }
+
+                    await saveData();
+
+                    registerPeriodicSync();
+
+                    // --- Synchronisation des notes EcoleDirecte ---
+                    if (apiData.notes && Array.isArray(apiData.notes)) {
+                        const db = await dbPromise;
+                        const allLocalNotes = await db.getAll('notes');
+                        const localRealNotes = allLocalNotes.filter(n => !n.id.startsWith('simu-'));
+
+                        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+                        const notesToPut = [];
+                        const seenLocalIds = new Set();
+
+                        edNotes.forEach(edNote => {
+                            const valString = (edNote.valeur || "").trim();
+                            const val = parseFloat(valString.replace(',', '.'));
+                            const storedValue = isNaN(val) ? valString : val;
+                            const max = parseFloat((edNote.noteSur || "").replace(',', '.')) || 20;
+                            const coef = parseFloat(edNote.coef) === 0 ? 1 : (parseFloat(edNote.coef) || 1);
+                            const edId = edNote.id.toString();
+
+                            let subject = matchSubject(edNote.libelleMatiere);
+
+                            if (!subject) {
+                                const id = normalizeString(edNote.libelleMatiere) + '-' + generateId();
+                                subject = {
+                                    id,
+                                    name: edNote.libelleMatiere,
+                                    coef: 1,
+                                    notes: [],
+                                    isDefault: false
+                                };
+                                data.subjects.push(subject);
+                            }
+
+                            const newNoteData = {
+                                id: edId,
+                                subjectId: subject.id,
+                                value: storedValue,
+                                max: max,
+                                coef: coef,
+                                ghost: false,
+                                date: edNote.date || new Date().toISOString(),
+                                title: edNote.devoir || ""
+                            };
+
+                            const existing = localRealNotes.find(n => n.id === edId);
+                            if (!existing) {
+                                notesToPut.push(newNoteData);
+                            } else {
+                                seenLocalIds.add(edId);
+                                // Compare data (value, date, title)
+                                if (existing.value !== newNoteData.value ||
+                                    existing.date !== newNoteData.date ||
+                                    existing.title !== newNoteData.title ||
+                                    existing.max !== newNoteData.max ||
+                                    existing.coef !== newNoteData.coef) {
+
+                                    // Preserve local properties like 'hidden' during update
+                                    const mergedNote = {
+                                        ...newNoteData,
+                                        hidden: existing.hidden || false
+                                    };
+                                    notesToPut.push(mergedNote);
+                                }
+                            }
+                        });
+
+                        const notesToDelete = localRealNotes
+                            .filter(n => !seenLocalIds.has(n.id))
+                            .map(n => n.id);
+
+                        const tx = db.transaction('notes', 'readwrite');
+                        for (const note of notesToPut) tx.store.put(note);
+                        for (const id of notesToDelete) tx.store.delete(id);
+                        await tx.done;
+
+                        // Rafraîchir l'état mémoire
+                        const finalNotes = await db.getAll('notes');
+                        data.subjects.forEach(s => {
+                            s.notes = finalNotes.filter(n => n.subjectId === s.id);
+                        });
+
+                        // Nettoyage des matières disparues de l'API (et qui n'ont plus de notes locales)
+                        const edSubjectIds = new Set(edNotes.map(n => matchSubject(n.libelleMatiere)?.id).filter(id => id));
+                        data.subjects = data.subjects.filter(s =>
+                            s.isDefault ||
+                            s.notes.length > 0 ||
+                            edSubjectIds.has(s.id)
+                        );
+
+                        updateAll(isSilent);
+                    }
+                    // --- Fin de synchronisation ---
+
+                    updateProfileUI();
+                    
+                    const dropdown = document.getElementById('profile-dropdown');
+                    if (dropdown) dropdown.classList.remove('visible');
+                    
+                    if (!isSilent) {
+                        showSnackbar(`Salut ${userSession.identity.prenom} ! 👋`);
+                        triggerConfetti();
+                    }
+                    hapticFeedback();
+                } else {
+                    throw new Error(apiData.message || 'Erreur inconnue');
+                }
+
+            } catch (err) {
+                console.error(err);
+                if (isSilent) {
+                    if (navigator.onLine) {
+                        showSnackbar('Session expirée, reconnecte-toi 👀');
+                        isLoggedOut = true;
+                        updateProfileUI();
+
+                        setTimeout(() => {
+                            const dropdown = document.getElementById('profile-dropdown');
+                            if (dropdown) dropdown.classList.add('visible');
+                        }, 500);
+                    } else {
+                        showSnackbar('Synchro impossible (Hors-ligne)');
+                    }
+                } else {
+                    showSnackbar('Erreur : ' + (err.message || 'Connexion échouée'));
+                    updateProfileUI();
+
+                    setTimeout(() => {
+                        const dropdown = document.getElementById('profile-dropdown');
+                        if (dropdown) dropdown.classList.add('visible');
+                    }, 100);
+                }
+            } finally {
+                if (profileAvatar) profileAvatar.classList.remove('syncing');
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Valider';
+                }
+            }
+        }
+
         // ==================== EVENT LISTENERS ====================
         function initEventListeners() {
+            window.addEventListener('online', () => document.body.classList.remove('is-offline'));
+            window.addEventListener('offline', () => document.body.classList.add('is-offline'));
+
+            window.addEventListener('beforeunload', (e) => {
+                const hasGhostNotes = data.subjects.some(s => s.notes.some(n => n.ghost || n.hidden));
+                if (hasGhostNotes) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => switchPage(item.dataset.page));
             });
             
             document.getElementById('add-note-btn').addEventListener('click', addNote);
             
-            document.getElementById('add-subject-btn').addEventListener('click', addSubject);
-            
-            document.getElementById('ghost-checkbox').addEventListener('click', function() {
-                this.classList.toggle('checked');
-                hapticFeedback();
-            });
-            
-            document.getElementById('edit-ghost-checkbox').addEventListener('click', function() {
-                this.classList.toggle('checked');
-                hapticFeedback();
-            });
             
             document.getElementById('target-input').addEventListener('change', function() {
-                data.target = parseFloat(this.value) || 14;
+                data.target = parseFloat(this.value) || 20;
                 saveData();
                 updateTargetProgress();
-            });
-            
-            document.getElementById('info-btn').addEventListener('click', () => {
-                document.getElementById('info-sheet').classList.add('visible');
-            });
-            
-            document.getElementById('close-info-sheet').addEventListener('click', () => {
-                document.getElementById('info-sheet').classList.remove('visible');
-            });
-            
-            document.getElementById('info-sheet').addEventListener('click', (e) => {
-                if (e.target.id === 'info-sheet') {
-                    document.getElementById('info-sheet').classList.remove('visible');
-                }
             });
             
             document.getElementById('coef-dialog-btn').addEventListener('click', openCoefDialog);
@@ -1014,7 +1553,12 @@
 
                     profileTrigger.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        profileDropdown.classList.toggle('visible');
+                        const isVisible = profileDropdown.classList.toggle('visible');
+                        if (isVisible) {
+                            hideLoginTip();
+                        } else {
+                            showLoginTip();
+                        }
                         hapticFeedback();
                     });
 
@@ -1022,16 +1566,47 @@
                         const wrapper = document.querySelector('.profile-wrapper');
                         if (wrapper && !wrapper.contains(e.target)) {
                             profileDropdown.classList.remove('visible');
+                            showLoginTip();
                         }
                     });
         
-                    profileDropdown.addEventListener('click', (e) => {
+                    profileDropdown.addEventListener('click', async (e) => {
                         if (e.target.id === 'login-submit-btn') {
-                            isLoggedOut = false;
-                            updateProfileUI();
-                            profileDropdown.classList.remove('visible');
-                            showSnackbar('Connexion réussie !');
+                            const inputs = profileDropdown.querySelectorAll('input');
+                            const id = inputs[0].value.trim();
+                            const pass = inputs[1].value.trim();
+
+                            if (!id || !pass) {
+                                showSnackbar('Il manque un truc là... 👀');
+                                return;
+                            }
+
+                            const rememberCheckbox = document.getElementById('remember-me-checkbox');
+                            if (rememberCheckbox && !rememberCheckbox.classList.contains('checked')) {
+                                isDontSaveMode = true;
+                                await clearAllData();
+                            } else {
+                                isDontSaveMode = false;
+                            }
+
+                            handleEDLogin(id, pass);
+                        }
+                        const rememberToggle = e.target.closest('#remember-me-toggle');
+                        if (rememberToggle) {
+                            const checkbox = rememberToggle.querySelector('.checkbox-m3');
+                            const disclaimer = document.getElementById('remember-me-disclaimer');
+                            const isChecked = checkbox.classList.toggle('checked');
+                            if (disclaimer) disclaimer.style.display = isChecked ? 'none' : 'block';
                             hapticFeedback();
+                        }
+                        const challengeBtn = e.target.closest('.challenge-btn');
+                        if (challengeBtn) {
+                            const rawResponse = challengeBtn.dataset.raw; 
+                            
+                            challengeBtn.textContent = 'Vérification...';
+                            challengeBtn.disabled = true;
+
+                            handleEDLogin(tempAuth.identifiant, tempAuth.motdepasse, rawResponse);
                         }
                     });
                 }
@@ -1057,6 +1632,36 @@
             });
             
             document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+
+            document.getElementById('close-about-dialog').addEventListener('click', () => {
+                document.getElementById('about-dialog').classList.remove('visible');
+            });
+
+            document.getElementById('about-dialog').addEventListener('click', (e) => {
+                if (e.target.id === 'about-dialog') {
+                    document.getElementById('about-dialog').classList.remove('visible');
+                }
+            });
+
+            document.getElementById('close-settings-dialog').addEventListener('click', () => {
+                document.getElementById('settings-dialog').classList.remove('visible');
+            });
+
+            document.getElementById('settings-dialog').addEventListener('click', (e) => {
+                if (e.target.id === 'settings-dialog') {
+                    document.getElementById('settings-dialog').classList.remove('visible');
+                }
+            });
+
+            document.getElementById('dont-save-toggle').addEventListener('click', async () => {
+                const checkbox = document.getElementById('dont-save-checkbox');
+                isDontSaveMode = checkbox.classList.toggle('checked');
+                if (isDontSaveMode) {
+                    await clearAllData();
+                    showSnackbar('Données locales supprimées');
+                }
+                hapticFeedback();
+            });
                 
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
                 applyTheme(e.matches ? 'dark' : 'light');
@@ -1133,10 +1738,11 @@ function showUpdateBanner() {
 }
 
         // ==================== INIT ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadData();
             initEventListeners();
             initShareDialog();
             initChart();
             updateAll();
+            checkAutoLogin();
         });

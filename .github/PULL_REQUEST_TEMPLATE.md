@@ -14,7 +14,7 @@
 # Capture(s) d'écran
 
 > [!NOTE]
-> Si tes changements concernent l'interface utilisateur, inclue des captures d'écran pour illustrer tes modifications.
+> Si tes changements concernent l'interface utilisateur, joins des captures d'écran pour illustrer tes modifications.
 
 # Informations supplémentaires
 > [!NOTE]

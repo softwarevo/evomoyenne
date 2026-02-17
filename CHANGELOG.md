@@ -1,7 +1,7 @@
 # 📈 evoMoyenne v1.1
 ## ✨ Quoi de neuf ?
-- 🔗 Ajout de la connexion à EcoleDirecte (via [evo2ED](https://github.com/softwarevo/evo2ed)) : rentrez vos identifiants 1 fois, obtenez vos moyennes en un clic pour toujours !
-- ℹ️ Ajout d'une page "À propos" pour vos raconter notre histoire, comment on gère vos données et plus !
+- 🔗 Ajout de la connexion à EcoleDirecte (via [evo2ED](https://github.com/softwarevo/evo2ed)) : rentrez vos identifiants 1 fois, obtenez vos moyennes en un clic pour toujours ! (si PWA installée, rafraîchissement automatique toutes les heures)
+- ℹ️ Ajout d'une page "À propos" pour vous raconter notre histoire, comment on gère vos données et plus !
 - ⚙️ Ajout d'une page "Réglages" pour personnaliser le fonctionnement de votre app
 - 👤 Ajout d'un modale de profil dans la topbar, remplaçant les actions topbar et accueillant les pages Réglages et À propos
 ## 🛠️ Améliorations
