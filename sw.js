@@ -1,6 +1,6 @@
-importScripts('assets/js/idb.js');
+importScripts('./assets/js/idb.js');
 
-const CACHE_NAME = 'evomoyenne-v1.1-indexeddb-v1';
+const CACHE_NAME = 'evomoyenne-v1.1-indexeddb-v2';
 const ASSETS = [
     './',
     './index.html',
@@ -44,7 +44,22 @@ self.addEventListener('periodicsync', event => {
 
 async function backgroundCheck() {
     try {
-        const db = await idb.openDB('evoMoyenne', 2);
+        const db = await idb.openDB('evoMoyenne', 2, {
+            upgrade(db, oldVersion) {
+                if (oldVersion < 1) {
+                    db.createObjectStore('notes', { keyPath: 'id' });
+                }
+                if (oldVersion < 2) {
+                    if (!db.objectStoreNames.contains('auth')) {
+                        db.createObjectStore('auth');
+                    }
+                    if (!db.objectStoreNames.contains('subjects')) {
+                        db.createObjectStore('subjects', { keyPath: 'id' });
+                    }
+                }
+            },
+        });
+
         const auth = await db.get('auth', 'credentials');
         if (!auth) return;
 
@@ -134,8 +149,8 @@ async function backgroundCheck() {
         if (newNotesFound) {
             self.registration.showNotification('evoMoyenne', {
                 body: 'Nouvelle note détectée ! Ta moyenne a peut-être bougé. 📈',
-                icon: '/assets/logos/logo-touch.png',
-                badge: '/assets/logos/logo-touch.png',
+                icon: 'assets/logos/logo-touch.png',
+                badge: 'assets/logos/logo-touch.png',
                 vibrate: [200, 100, 200]
             });
         }
