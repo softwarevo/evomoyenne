@@ -266,6 +266,11 @@
             <h2 class="dialog-title">À propos</h2>
             <div class="dialog-content">
                 <p>evoMoyenne sert à calculer votre moyenne générale (et plus) depuis vos notes EcoleDirecte.</p>
+                <div id="official-disclaimer" style="margin: 16px 0; padding: 12px; background: var(--md-sys-color-surface-container-high); border-radius: 12px; font-size: 13px; display: none;">
+                    <span class="material-symbols-rounded" style="font-size: 18px; vertical-align: middle; margin-right: 4px; color: var(--md-sys-color-contrast);">info</span>
+                    Au conseil de classe, seule la méthode officielle prend foi, même si elle est injuste.
+                    Votre moyenne officielle : <strong id="official-avg-value">--</strong>
+                </div>
 				<p>Nous utilisons notre propre bridge , <a href=https://github.com/softwarevo/evo2ed>evo2ED</a>, basé sur la librairie <a href=https://github.com/louislegrain/api-ecoledirecte>api-ecoledirecte</a>, pour la connexion à EcoleDirecte.
 				<p><strong>TOUT le contenu d'evoMoyenne</strong> est eopen-source, du site lui même au bridge.
                 <p style="margin-top: 16px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Version 1.1</p>
@@ -289,6 +294,59 @@
                 <p style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">
                     Si cette option est activée, aucune donnée ne sera sauvegardée dans votre navigateur. Tout sera perdu à la fermeture de l'onglet.
                 </p>
+
+                <h3 class="settings-subtitle">Moyenne générale</h3>
+                <div class="settings-group">
+                    <label class="radio-item">
+                        <input type="radio" name="general-mode" value="weighted" checked>
+                        <div class="radio-label">
+                            <span class="radio-title">Moyenne pondérée (recommandé)</span>
+                            <span class="radio-desc">Moyenne de toutes vos notes</span>
+                        </div>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="general-mode" value="subjects">
+                        <div class="radio-label">
+                            <span class="radio-title">Moyennes des matières (officiel)</span>
+                            <span class="radio-desc">Moyenne de vos moyennes de matières (conseil de classe)</span>
+                        </div>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="general-mode" value="median">
+                        <div class="radio-label">
+                            <span class="radio-title">Médiane</span>
+                            <span class="radio-desc">Note centrale (la moitié des notes est au-dessus)</span>
+                        </div>
+                    </label>
+                    <div class="ghost-toggle" id="general-truncated-toggle" style="padding: 8px 0; cursor: pointer;">
+                        <div class="checkbox-m3" id="general-truncated-checkbox">
+                            <span class="material-symbols-rounded filled">check</span>
+                        </div>
+                        <label class="ghost-toggle-label" style="cursor: pointer;">Tronquée (retire la meilleure et la pire)</label>
+                    </div>
+                </div>
+
+                <h3 class="settings-subtitle">Moyennes des matières</h3>
+                <div class="settings-group">
+                    <label class="radio-item">
+                        <input type="radio" name="subject-mode" value="weighted" checked>
+                        <div class="radio-label">
+                            <span class="radio-title">Moyenne pondérée (officiel) (recommandé)</span>
+                        </div>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="subject-mode" value="median">
+                        <div class="radio-label">
+                            <span class="radio-title">Médiane</span>
+                        </div>
+                    </label>
+                    <div class="ghost-toggle" id="subject-truncated-toggle" style="padding: 8px 0; cursor: pointer;">
+                        <div class="checkbox-m3" id="subject-truncated-checkbox">
+                            <span class="material-symbols-rounded filled">check</span>
+                        </div>
+                        <label class="ghost-toggle-label" style="cursor: pointer;">Tronquée (retire la meilleure et la pire)</label>
+                    </div>
+                </div>
             </div>
             <div class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-settings-dialog">Fermer</button>
