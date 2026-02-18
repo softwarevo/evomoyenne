@@ -19,6 +19,12 @@
             history: {},
             target: 20,
             theme: 'dark',
+            calculation: {
+                generalMode: 'weighted',
+                generalTruncated: false,
+                subjectMode: 'weighted',
+                subjectTruncated: false
+            },
             auth: {
                 token: null,
                 '2faToken': null,
@@ -61,6 +67,9 @@
                     data.target = settings.target ?? 20;
                     data.theme = settings.theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                     data.history = settings.history ?? {};
+                    if (settings.calculation) {
+                        data.calculation = { ...data.calculation, ...settings.calculation };
+                    }
                 } else {
                     data.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
@@ -150,7 +159,8 @@
                 await tx.objectStore('settings').put({
                     target: data.target,
                     theme: data.theme,
-                    history: data.history
+                    history: data.history,
+                    calculation: data.calculation
                 }, 'app');
 
                 await tx.done;
@@ -226,75 +236,139 @@
         let tempAuth = {};
 
         // ==================== CALCULATIONS ====================
-        function calculateSubjectAverage(subject, includeGhost = true) {
-            let notes = subject.notes.filter(n => !n.hidden);
+        function calculateSubjectAverage(subject, includeGhost = true, atDate = null, overrideSettings = null) {
+            const calcSettings = overrideSettings || data.calculation;
+            let notes = (subject.notes || []).filter(n => !n.hidden);
             if (!includeGhost) notes = notes.filter(n => !n.ghost);
 
+            if (atDate) {
+                const atDateTime = new Date(atDate).getTime();
+                notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
+            }
+
+            notes = notes.filter(n => typeof n.value === 'number');
             if (notes.length === 0) return null;
-            
-            let totalWeighted = 0;
-            let totalCoef = 0;
-            
-            notes.forEach(note => {
-                if (typeof note.value !== 'number') return;
-                const normalized = (note.value / note.max) * 20;
-                totalWeighted += normalized * note.coef;
-                totalCoef += note.coef;
-            });
-            
-            return totalCoef > 0 ? totalWeighted / totalCoef : null;
-        }
 
-        function calculateGeneralAverage(includeGhost = true, atDate = null) {
-            let totalWeightedPoints = 0;
-            let totalWeightedCoefs = 0;
-            const atDateTime = atDate ? new Date(atDate).getTime() : null;
-
-            data.subjects.forEach(subject => {
-                if (subject.notes && subject.notes.length > 0) {
-                    subject.notes.forEach(note => {
-                        if (note.hidden) return;
-                        if (!includeGhost && note.ghost) return;
-                        if (atDateTime && note.date) {
-                            const noteDate = new Date(note.date.split('T')[0]).getTime();
-                            if (noteDate > atDateTime) return;
-                        }
-                        if (typeof note.value !== 'number') return;
-
-                        const noteSur20 = (note.value / note.max) * 20;
-                        const doubleCoef = note.coef * subject.coef;
-                
-                        totalWeightedPoints += noteSur20 * doubleCoef;
-                        totalWeightedCoefs += doubleCoef;
-                    });
+            if (calcSettings.subjectMode === 'median') {
+                const values = notes.map(n => (n.value / n.max) * 20).sort((a, b) => a - b);
+                const mid = Math.floor(values.length / 2);
+                if (values.length % 2 === 0) {
+                    return (values[mid - 1] + values[mid]) / 2;
+                } else {
+                    return values[mid];
                 }
-            });
+            } else {
+                // weighted
+                let effectiveNotes = [...notes];
+                if (calcSettings.subjectTruncated) {
+                    effectiveNotes.sort((a, b) => (a.value / a.max) - (b.value / b.max));
+                    effectiveNotes.shift(); // remove min
+                    effectiveNotes.pop();   // remove max
+                }
 
-            return totalWeightedCoefs > 0 ? totalWeightedPoints / totalWeightedCoefs : null;
+                let totalWeighted = 0;
+                let totalCoef = 0;
+                effectiveNotes.forEach(note => {
+                    const normalized = (note.value / note.max) * 20;
+                    totalWeighted += normalized * note.coef;
+                    totalCoef += note.coef;
+                });
+                return totalCoef > 0 ? totalWeighted / totalCoef : null;
+            }
         }
 
-        function calculateGeneralAverage(includeGhost = true, atDate = null) {
-            const atDateTime = atDate ? new Date(atDate).getTime() : null;
+        function calculateGeneralAverage(includeGhost = true, atDate = null, forceOfficial = false) {
+            let calcSettings = data.calculation;
+            let subjCalcSettings = data.calculation;
 
-            const { totalPoints, totalCoefs } = data.subjects.reduce((acc, subject) => {
-                const subjectNotes = subject.notes || [];
-        
-                subjectNotes.forEach(note => {
-                    if (note.hidden || (!includeGhost && note.ghost)) return;
-                    if (atDateTime && note.date && new Date(note.date.split('T')[0]).getTime() > atDateTime) return;
-                    if (typeof note.value !== 'number') return;
+            if (forceOfficial) {
+                calcSettings = { generalMode: 'subjects', generalTruncated: false };
+                subjCalcSettings = { subjectMode: 'weighted', subjectTruncated: false };
+            }
 
-                    const noteSur20 = (note.value / note.max) * 20;
-                    const weight = note.coef * subject.coef;
-
-                    acc.totalPoints += noteSur20 * weight;
-                    acc.totalCoefs += weight;
+            if (calcSettings.generalMode === 'weighted') {
+                let allNotes = [];
+                data.subjects.forEach(subject => {
+                    let notes = (subject.notes || []).filter(n => !n.hidden);
+                    if (!includeGhost) notes = notes.filter(n => !n.ghost);
+                    if (atDate) {
+                        const atDateTime = new Date(atDate).getTime();
+                        notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
+                    }
+                    notes = notes.filter(n => typeof n.value === 'number');
+                    notes.forEach(n => {
+                        allNotes.push({
+                            valueOn20: (n.value / n.max) * 20,
+                            coef: n.coef * subject.coef
+                        });
+                    });
                 });
 
-                return acc;
-            }, { totalPoints: 0, totalCoefs: 0 });
+                if (allNotes.length === 0) return null;
 
-            return totalCoefs > 0 ? totalPoints / totalCoefs : null;
+                if (calcSettings.generalTruncated) {
+                    allNotes.sort((a, b) => a.valueOn20 - b.valueOn20);
+                    allNotes.shift();
+                    allNotes.pop();
+                }
+
+                let totalPoints = 0;
+                let totalCoefs = 0;
+                allNotes.forEach(n => {
+                    totalPoints += n.valueOn20 * n.coef;
+                    totalCoefs += n.coef;
+                });
+                return totalCoefs > 0 ? totalPoints / totalCoefs : null;
+
+            } else if (calcSettings.generalMode === 'subjects') {
+                let subjectAverages = data.subjects.map(s => {
+                    return {
+                        avg: calculateSubjectAverage(s, includeGhost, atDate, subjCalcSettings),
+                        coef: s.coef
+                    };
+                }).filter(s => s.avg !== null);
+
+                if (subjectAverages.length === 0) return null;
+
+                if (calcSettings.generalTruncated) {
+                    subjectAverages.sort((a, b) => a.avg - b.avg);
+                    subjectAverages.shift();
+                    subjectAverages.pop();
+                }
+
+                let totalPoints = 0;
+                let totalCoefs = 0;
+                subjectAverages.forEach(s => {
+                    totalPoints += s.avg * s.coef;
+                    totalCoefs += s.coef;
+                });
+                return totalCoefs > 0 ? totalPoints / totalCoefs : null;
+
+            } else if (calcSettings.generalMode === 'median') {
+                let allValues = [];
+                data.subjects.forEach(subject => {
+                    let notes = (subject.notes || []).filter(n => !n.hidden);
+                    if (!includeGhost) notes = notes.filter(n => !n.ghost);
+                    if (atDate) {
+                        const atDateTime = new Date(atDate).getTime();
+                        notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
+                    }
+                    notes = notes.filter(n => typeof n.value === 'number');
+                    notes.forEach(n => {
+                        allValues.push((n.value / n.max) * 20);
+                    });
+                });
+
+                if (allValues.length === 0) return null;
+                allValues.sort((a, b) => a - b);
+                const mid = Math.floor(allValues.length / 2);
+                if (allValues.length % 2 === 0) {
+                    return (allValues[mid - 1] + allValues[mid]) / 2;
+                } else {
+                    return allValues[mid];
+                }
+            }
+            return null;
         }
 
         function getTopFlop() {
@@ -590,6 +664,42 @@
             } else {
                 checkbox.classList.remove('checked');
             }
+
+            // Update radio buttons
+            document.querySelectorAll('input[name="general-mode"]').forEach(radio => {
+                radio.checked = radio.value === data.calculation.generalMode;
+            });
+            document.querySelectorAll('input[name="subject-mode"]').forEach(radio => {
+                radio.checked = radio.value === data.calculation.subjectMode;
+            });
+
+            // Update checkboxes
+            const genTrunc = document.getElementById('general-truncated-checkbox');
+            if (data.calculation.generalTruncated) genTrunc.classList.add('checked');
+            else genTrunc.classList.remove('checked');
+
+            const subTrunc = document.getElementById('subject-truncated-checkbox');
+            if (data.calculation.subjectTruncated) subTrunc.classList.add('checked');
+            else subTrunc.classList.remove('checked');
+        }
+
+        function updateAboutDialog() {
+            const officialAvg = calculateGeneralAverage(true, null, true);
+
+            const isOfficial = data.calculation.generalMode === 'subjects' &&
+                               data.calculation.subjectMode === 'weighted' &&
+                               !data.calculation.generalTruncated &&
+                               !data.calculation.subjectTruncated;
+
+            const disclaimer = document.getElementById('official-disclaimer');
+            const avgValEl = document.getElementById('official-avg-value');
+
+            if (!isOfficial && officialAvg !== null) {
+                disclaimer.style.display = 'block';
+                avgValEl.textContent = officialAvg.toFixed(2);
+            } else {
+                disclaimer.style.display = 'none';
+            }
         }
 
         function updateProfileUI() {
@@ -688,6 +798,7 @@
             if (aboutBtn) {
                 aboutBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    updateAboutDialog();
                     document.getElementById('about-dialog').classList.add('visible');
                     document.getElementById('profile-dropdown').classList.remove('visible');
                     hapticFeedback();
@@ -1684,6 +1795,40 @@
                     await clearAllData();
                     showSnackbar('Données locales supprimées');
                 }
+                hapticFeedback();
+            });
+
+            document.querySelectorAll('input[name="general-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    data.calculation.generalMode = e.target.value;
+                    saveData();
+                    updateAll();
+                    hapticFeedback();
+                });
+            });
+
+            document.querySelectorAll('input[name="subject-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    data.calculation.subjectMode = e.target.value;
+                    saveData();
+                    updateAll();
+                    hapticFeedback();
+                });
+            });
+
+            document.getElementById('general-truncated-toggle').addEventListener('click', () => {
+                const checkbox = document.getElementById('general-truncated-checkbox');
+                data.calculation.generalTruncated = checkbox.classList.toggle('checked');
+                saveData();
+                updateAll();
+                hapticFeedback();
+            });
+
+            document.getElementById('subject-truncated-toggle').addEventListener('click', () => {
+                const checkbox = document.getElementById('subject-truncated-checkbox');
+                data.calculation.subjectTruncated = checkbox.classList.toggle('checked');
+                saveData();
+                updateAll();
                 hapticFeedback();
             });
                 

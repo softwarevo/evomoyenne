@@ -1049,6 +1049,57 @@ body {
     color: var(--md-sys-color-on-primary);
 }
 
+.settings-subtitle {
+    font-size: 11px;
+    font-weight: 700;
+    margin: 20px 0 8px 4px;
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.settings-group {
+    background: var(--md-sys-color-surface-container-high);
+    border-radius: var(--radius-md);
+    padding: 4px 16px;
+    margin-bottom: 16px;
+}
+
+.radio-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    cursor: pointer;
+}
+
+.radio-item:not(:last-child) {
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.radio-item input[type="radio"] {
+    margin-top: 4px;
+    accent-color: var(--md-sys-color-on-surface);
+}
+
+.radio-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.radio-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.radio-desc {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    line-height: 1.3;
+}
+
 /* Share Card Popup */
 .share-card-container {
     padding: 24px;
