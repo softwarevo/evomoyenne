@@ -1,6 +1,6 @@
 importScripts('./assets/js/idb.js');
 
-const CACHE_NAME = 'evomoyenne-v1.1-refresh1';
+const CACHE_NAME = 'evomoyenne-v1.1-refresh2';
 const ASSETS = [
     './',
     './index.html',
@@ -10,11 +10,9 @@ const ASSETS = [
     './manifest.webmanifest'
 ];
 
-self.addEventListener('install', e => {
-    self.skipWaiting();
-    e.waitUntil(
-        caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))
-    );
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim()); // Force les onglets ouverts à passer sous le nouveau SW
 });
 
 self.addEventListener('activate', e => {
@@ -22,7 +20,10 @@ self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(keys => Promise.all(
             keys.map(key => {
-                if (key !== CACHE_NAME) return caches.delete(key);
+                if (key !== CACHE_NAME) {
+                    console.log('Cleaning old cache:', key);
+                    return caches.delete(key);
+                }
             })
         ))
     );
