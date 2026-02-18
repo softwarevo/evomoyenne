@@ -160,7 +160,7 @@
         }
 
         function generateId(prefix = '') {
-            return prefix + Date.now().toString(36) + Math.random().toString(36).substr(2);
+            return prefix + crypto.randomUUID().split('-')[0];
         }
 
         function normalizeString(str) {
@@ -271,6 +271,30 @@
             });
 
             return totalWeightedCoefs > 0 ? totalWeightedPoints / totalWeightedCoefs : null;
+        }
+
+        function calculateGeneralAverage(includeGhost = true, atDate = null) {
+            const atDateTime = atDate ? new Date(atDate).getTime() : null;
+
+            const { totalPoints, totalCoefs } = data.subjects.reduce((acc, subject) => {
+                const subjectNotes = subject.notes || [];
+        
+                subjectNotes.forEach(note => {
+                    if (note.hidden || (!includeGhost && note.ghost)) return;
+                    if (atDateTime && note.date && new Date(note.date.split('T')[0]).getTime() > atDateTime) return;
+                    if (typeof note.value !== 'number') return;
+
+                    const noteSur20 = (note.value / note.max) * 20;
+                    const weight = note.coef * subject.coef;
+
+                    acc.totalPoints += noteSur20 * weight;
+                    acc.totalCoefs += weight;
+                });
+
+                return acc;
+            }, { totalPoints: 0, totalCoefs: 0 });
+
+            return totalCoefs > 0 ? totalPoints / totalCoefs : null;
         }
 
         function getTopFlop() {
@@ -1703,38 +1727,28 @@
                 
         }
 
-// ==================== SERVICE WORKER MANAGEMENT ====================
+        // ==================== SERVICE WORKER MANAGEMENT ====================
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-			
-            if (navigator.onLine) {
-                reg.update();
-            }
-			
-            setInterval(() => {
-                if (navigator.onLine) {
-                    console.log('Vérification de mise à jour...');
-                    reg.update();
-                }
-            }, 6 * 60 * 60 * 1000);
-			
-            reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBanner();
-                    }
-                });
-            });
-        }).catch(err => console.error('SW Registration Error:', err));
-    });
-}
+    window.addEventListener('load', async () => {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        
+        // Check for updates every 6 hours
+        setInterval(() => reg.update(), 6 * 60 * 60 * 1000);
 
-function showUpdateBanner() {
-    if (confirm("Nouvelle version de evoMoyenne disponible ! Recharger pour mettre à jour ?")) {
-        window.location.reload();
-    }
+        reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    showSnackbar("Mise à jour installée !");
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            });
+        });
+    });
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log("SW rafraîchi");
+    });
 }
 
         // ==================== INIT ====================
