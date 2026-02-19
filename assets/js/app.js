@@ -180,23 +180,6 @@
                 .replace(/[^a-z0-9&]/g, '');
         }
 
-        async function imageUrlToBase64(url) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) return null;
-                const blob = await response.blob();
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-            } catch (err) {
-                console.error("Error converting image to base64:", err);
-                return null;
-            }
-        }
-
         function matchSubject(edName) {
             const normalizedEd = normalizeString(edName);
 
@@ -1522,16 +1505,8 @@
                         data.auth.identity = {
                             prenom: apiData.identity.prenom || data.auth.identity.prenom,
                             nom: apiData.identity.nom || data.auth.identity.nom,
-                            photo: data.auth.identity.photo || null
+                            photo: apiData.identity.photo || data.auth.identity.photo || null
                         };
-
-                        if (apiData.identity.photo && apiData.identity.photo.startsWith('http')) {
-                            const photoBase64 = await imageUrlToBase64(apiData.identity.photo);
-                            if (photoBase64) {
-                                data.auth.identity.photo = photoBase64;
-                                apiData.identity.photo = photoBase64;
-                            }
-                        }
                     }
 
                     await saveData();
