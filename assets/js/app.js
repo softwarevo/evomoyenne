@@ -238,25 +238,35 @@
         // ==================== CALCULATIONS ====================
         function calculateWeightedMedian(items) {
             if (items.length === 0) return null;
-            items.sort((a, b) => a.value - b.value);
-            const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+            // Ensure all values and weights are numbers
+            const cleanItems = items.map(item => ({
+                value: Number(item.value),
+                weight: Math.max(0, Number(item.weight) || 0)
+            })).filter(item => !isNaN(item.value));
+
+            if (cleanItems.length === 0) return null;
+
+            cleanItems.sort((a, b) => a.value - b.value);
+            const totalWeight = cleanItems.reduce((sum, item) => sum + item.weight, 0);
+            if (totalWeight <= 0) return cleanItems[Math.floor(cleanItems.length / 2)].value;
+
             const threshold = totalWeight / 2;
 
             let cumulativeWeight = 0;
-            for (let i = 0; i < items.length; i++) {
-                cumulativeWeight += items[i].weight;
+            for (let i = 0; i < cleanItems.length; i++) {
+                cumulativeWeight += cleanItems[i].weight;
                 if (cumulativeWeight > threshold) {
-                    return items[i].value;
+                    return cleanItems[i].value;
                 }
                 if (Math.abs(cumulativeWeight - threshold) < 1e-9) {
-                    if (i + 1 < items.length) {
-                        return (items[i].value + items[i + 1].value) / 2;
+                    if (i + 1 < cleanItems.length) {
+                        return (cleanItems[i].value + cleanItems[i + 1].value) / 2;
                     } else {
-                        return items[i].value;
+                        return cleanItems[i].value;
                     }
                 }
             }
-            return items[items.length - 1].value;
+            return cleanItems[cleanItems.length - 1].value;
         }
 
         function calculateSubjectAverage(subject, includeGhost = true, atDate = null, overrideSettings = null) {
@@ -275,7 +285,7 @@
             if (calcSettings.subjectMode === 'median') {
                 const items = notes.map(n => ({
                     value: (n.value / n.max) * 20,
-                    weight: n.coef
+                    weight: Number(n.coef)
                 }));
                 return calculateWeightedMedian(items);
             } else {
@@ -322,7 +332,7 @@
                     notes.forEach(n => {
                         allNotes.push({
                             valueOn20: (n.value / n.max) * 20,
-                            coef: n.coef * subject.coef
+                            coef: Number(n.coef) * Number(subject.coef || 1)
                         });
                     });
                 });
@@ -384,7 +394,7 @@
                     notes.forEach(n => {
                         allItems.push({
                             value: (n.value / n.max) * 20,
-                            weight: n.coef * subject.coef
+                            weight: Number(n.coef) * Number(subject.coef || 1)
                         });
                     });
                 });
@@ -439,6 +449,10 @@
             saveData();
         }
 
+        function hasGhostNotes() {
+            return data.subjects.some(s => s.notes.some(n => n.ghost || n.hidden));
+        }
+
         function getEvolution() {
             // Collecte toutes les dates uniques des notes réelles non cachées
             const allDates = new Set();
@@ -476,6 +490,10 @@
                 const oldAvg = parseFloat(avgEl.textContent) || 0;
                 avgEl.textContent = avg.toFixed(2);
                 
+                if (hasGhostNotes()) {
+                    avgEl.textContent += ' 👻';
+                }
+
                 if (oldAvg > 0 && avg > oldAvg && !suppressConfetti) {
                     triggerConfetti();
                 }
@@ -577,6 +595,7 @@
             
             container.innerHTML = data.subjects.map(subject => {
                 const avg = calculateSubjectAverage(subject);
+                const hasGhosts = subject.notes.some(n => n.ghost || n.hidden);
                 const recentNotes = subject.notes.slice(-3).reverse();
                 const hasMore = subject.notes.length > 3;
                 
@@ -590,7 +609,7 @@
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')">${avg !== null ? avg.toFixed(2) : '--'}</div>
+                                <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')">${avg !== null ? avg.toFixed(2) : '--'}${hasGhosts ? ' 👻' : ''}</div>
                             </div>
                         </div>
                         <div class="notes-list" id="notes-${subject.id}" style="display: none;">
@@ -934,8 +953,15 @@
                 const visibleMin = Math.min(...chartData);
                 const visibleMax = Math.max(...chartData);
         
-                evolutionChart.options.scales.y.min = Math.floor(visibleMin - 1);
-                evolutionChart.options.scales.y.max = Math.ceil(visibleMax + 1);
+                if (visibleMin === visibleMax) {
+                    evolutionChart.options.scales.y.min = Math.floor(visibleMin - 1);
+                    evolutionChart.options.scales.y.max = Math.ceil(visibleMax + 1);
+                } else {
+                    // Zoom slightly more if there's variation
+                    const range = visibleMax - visibleMin;
+                    evolutionChart.options.scales.y.min = visibleMin - (range * 0.1);
+                    evolutionChart.options.scales.y.max = visibleMax + (range * 0.1);
+                }
             } else {
                 evolutionChart.options.scales.y.min = 0;
                 evolutionChart.options.scales.y.max = 20;
@@ -1053,6 +1079,49 @@
             document.getElementById('edit-dialog').classList.add('visible');
         }
 
+        async function removeAllGhostNotes() {
+            const db = await dbPromise;
+            const tx = db.transaction('notes', 'readwrite');
+            const notesStore = tx.objectStore('notes');
+
+            for (const subject of data.subjects) {
+                // Remove purely simulated notes
+                const notesToRemove = subject.notes.filter(n => n.id.startsWith('simu-'));
+                for (const n of notesToRemove) {
+                    await notesStore.delete(n.id);
+                }
+
+                subject.notes = subject.notes.filter(n => !n.id.startsWith('simu-'));
+
+                // Revert modified notes and unhide hidden notes
+                for (const note of subject.notes) {
+                    let changed = false;
+                    if (note.originalValue !== undefined) {
+                        note.value = note.originalValue;
+                        note.max = note.originalMax;
+                        note.coef = note.originalCoef;
+                        delete note.originalValue;
+                        delete note.originalMax;
+                        delete note.originalCoef;
+                        note.ghost = false;
+                        changed = true;
+                    }
+                    if (note.hidden) {
+                        note.hidden = false;
+                        changed = true;
+                    }
+                    if (changed) {
+                        await notesStore.put(note);
+                    }
+                }
+            }
+            await tx.done;
+            saveData();
+            updateAll();
+            showSnackbar('Notes fantômes retirées');
+            hapticFeedback();
+        }
+
         async function saveEdit() {
             if (!editingNote) return;
             
@@ -1062,17 +1131,24 @@
             const note = subject.notes.find(n => n.id === editingNote.noteId);
             if (!note) return;
             
+            const val = parseFloat(document.getElementById('edit-note-value').value);
+            const max = parseFloat(document.getElementById('edit-note-max').value) || 20;
+            const coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+
+            if (isNaN(val) || val < 0 || val > max) {
+                showSnackbar('Note invalide');
+                return;
+            }
+
             if (!note.ghost && note.originalValue === undefined) {
                 note.originalValue = note.value;
                 note.originalMax = note.max;
                 note.originalCoef = note.coef;
             }
 
-            const val = parseFloat(document.getElementById('edit-note-value').value);
-            if (!isNaN(val)) note.value = val;
-
-            note.max = parseFloat(document.getElementById('edit-note-max').value) || 20;
-            note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+            note.value = val;
+            note.max = max;
+            note.coef = coef;
             note.ghost = true;
             
             const db = await dbPromise;
@@ -1367,6 +1443,26 @@
             updateSubjectSelect();
             updateSubjectsList();
             updateChart();
+
+            // Handle ghost actions visibility
+            const hasGhosts = hasGhostNotes();
+            const removeBtn = document.getElementById('remove-ghosts-btn');
+            if (removeBtn) {
+                removeBtn.style.display = hasGhosts ? 'flex' : 'none';
+            }
+
+            // Handle share buttons state
+            const shareBtn = document.getElementById('share-card-btn');
+            const pdfBtn = document.getElementById('export-pdf-btn');
+            if (shareBtn && pdfBtn) {
+                if (hasGhosts) {
+                    shareBtn.classList.add('btn-disabled');
+                    pdfBtn.classList.add('btn-disabled');
+                } else {
+                    shareBtn.classList.remove('btn-disabled');
+                    pdfBtn.classList.remove('btn-disabled');
+                }
+            }
         }
 
         async function registerPeriodicSync() {
@@ -1670,6 +1766,7 @@
             });
             
             document.getElementById('add-note-btn').addEventListener('click', addNote);
+            document.getElementById('remove-ghosts-btn').addEventListener('click', removeAllGhostNotes);
             
             
             document.getElementById('target-input').addEventListener('change', function() {
@@ -1707,6 +1804,10 @@
             });
             
             document.getElementById('share-card-btn').addEventListener('click', () => {
+                if (hasGhostNotes()) {
+                    showSnackbar('Vous devez retirer vos notes fantômes pour cela.');
+                    return;
+                }
                 document.getElementById('share-form').style.display = 'block';
                 document.getElementById('share-preview').style.display = 'none';
                 document.getElementById('share-dialog').classList.add('visible');
@@ -1798,7 +1899,13 @@
                 }
             });
             
-            document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+            document.getElementById('export-pdf-btn').addEventListener('click', () => {
+                if (hasGhostNotes()) {
+                    showSnackbar('Vous devez retirer vos notes fantômes pour cela.');
+                    return;
+                }
+                exportPDF();
+            });
 
             document.getElementById('close-about-dialog').addEventListener('click', () => {
                 document.getElementById('about-dialog').classList.remove('visible');

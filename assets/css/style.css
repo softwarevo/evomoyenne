@@ -1548,3 +1548,33 @@ body.is-offline .offline-badge {
         visibility var(--transition-fast),
         height var(--transition-medium);
 }
+
+/* Ghost Grade Styles */
+.ghost-indicator {
+    margin-left: 4px;
+}
+
+.btn-disabled {
+    opacity: 0.5 !important;
+    filter: grayscale(1);
+    cursor: not-allowed !important;
+}
+
+#remove-ghosts-btn {
+    background: #ffdad6;
+    color: #410002;
+}
+
+[data-theme="dark"] #remove-ghosts-btn {
+    background: #93000a;
+    color: #ffdad4;
+}
+
+#remove-ghosts-btn:hover {
+    background: #ffb4ab;
+}
+
+[data-theme="dark"] #remove-ghosts-btn:hover {
+    background: #ffb4ab;
+    color: #690005;
+}
