@@ -236,6 +236,29 @@
         let tempAuth = {};
 
         // ==================== CALCULATIONS ====================
+        function calculateWeightedMedian(items) {
+            if (items.length === 0) return null;
+            items.sort((a, b) => a.value - b.value);
+            const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+            const threshold = totalWeight / 2;
+
+            let cumulativeWeight = 0;
+            for (let i = 0; i < items.length; i++) {
+                cumulativeWeight += items[i].weight;
+                if (cumulativeWeight > threshold) {
+                    return items[i].value;
+                }
+                if (Math.abs(cumulativeWeight - threshold) < 1e-9) {
+                    if (i + 1 < items.length) {
+                        return (items[i].value + items[i + 1].value) / 2;
+                    } else {
+                        return items[i].value;
+                    }
+                }
+            }
+            return items[items.length - 1].value;
+        }
+
         function calculateSubjectAverage(subject, includeGhost = true, atDate = null, overrideSettings = null) {
             const calcSettings = overrideSettings || data.calculation;
             let notes = (subject.notes || []).filter(n => !n.hidden);
@@ -250,20 +273,20 @@
             if (notes.length === 0) return null;
 
             if (calcSettings.subjectMode === 'median') {
-                const values = notes.map(n => (n.value / n.max) * 20).sort((a, b) => a - b);
-                const mid = Math.floor(values.length / 2);
-                if (values.length % 2 === 0) {
-                    return (values[mid - 1] + values[mid]) / 2;
-                } else {
-                    return values[mid];
-                }
+                const items = notes.map(n => ({
+                    value: (n.value / n.max) * 20,
+                    weight: n.coef
+                }));
+                return calculateWeightedMedian(items);
             } else {
                 // weighted
                 let effectiveNotes = [...notes];
-                if (calcSettings.subjectTruncated) {
+                if (calcSettings.subjectTruncated && effectiveNotes.length >= 2) {
                     effectiveNotes.sort((a, b) => (a.value / a.max) - (b.value / b.max));
-                    effectiveNotes.shift(); // remove min
-                    effectiveNotes.pop();   // remove max
+                    const secondMin = { ...effectiveNotes[1] };
+                    const secondMax = { ...effectiveNotes[effectiveNotes.length - 2] };
+                    effectiveNotes[0] = secondMin;
+                    effectiveNotes[effectiveNotes.length - 1] = secondMax;
                 }
 
                 let totalWeighted = 0;
@@ -306,10 +329,12 @@
 
                 if (allNotes.length === 0) return null;
 
-                if (calcSettings.generalTruncated) {
+                if (calcSettings.generalTruncated && allNotes.length >= 2) {
                     allNotes.sort((a, b) => a.valueOn20 - b.valueOn20);
-                    allNotes.shift();
-                    allNotes.pop();
+                    const secondMin = { ...allNotes[1] };
+                    const secondMax = { ...allNotes[allNotes.length - 2] };
+                    allNotes[0] = secondMin;
+                    allNotes[allNotes.length - 1] = secondMax;
                 }
 
                 let totalPoints = 0;
@@ -330,10 +355,12 @@
 
                 if (subjectAverages.length === 0) return null;
 
-                if (calcSettings.generalTruncated) {
+                if (calcSettings.generalTruncated && subjectAverages.length >= 2) {
                     subjectAverages.sort((a, b) => a.avg - b.avg);
-                    subjectAverages.shift();
-                    subjectAverages.pop();
+                    const secondMin = { ...subjectAverages[1] };
+                    const secondMax = { ...subjectAverages[subjectAverages.length - 2] };
+                    subjectAverages[0] = secondMin;
+                    subjectAverages[subjectAverages.length - 1] = secondMax;
                 }
 
                 let totalPoints = 0;
@@ -345,7 +372,7 @@
                 return totalCoefs > 0 ? totalPoints / totalCoefs : null;
 
             } else if (calcSettings.generalMode === 'median') {
-                let allValues = [];
+                let allItems = [];
                 data.subjects.forEach(subject => {
                     let notes = (subject.notes || []).filter(n => !n.hidden);
                     if (!includeGhost) notes = notes.filter(n => !n.ghost);
@@ -355,18 +382,15 @@
                     }
                     notes = notes.filter(n => typeof n.value === 'number');
                     notes.forEach(n => {
-                        allValues.push((n.value / n.max) * 20);
+                        allItems.push({
+                            value: (n.value / n.max) * 20,
+                            weight: n.coef * subject.coef
+                        });
                     });
                 });
 
-                if (allValues.length === 0) return null;
-                allValues.sort((a, b) => a - b);
-                const mid = Math.floor(allValues.length / 2);
-                if (allValues.length % 2 === 0) {
-                    return (allValues[mid - 1] + allValues[mid]) / 2;
-                } else {
-                    return allValues[mid];
-                }
+                if (allItems.length === 0) return null;
+                return calculateWeightedMedian(allItems);
             }
             return null;
         }
