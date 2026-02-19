@@ -1374,6 +1374,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .profile-avatar .material-symbols-rounded {
