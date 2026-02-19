@@ -1131,17 +1131,24 @@
             const note = subject.notes.find(n => n.id === editingNote.noteId);
             if (!note) return;
             
+            const val = parseFloat(document.getElementById('edit-note-value').value);
+            const max = parseFloat(document.getElementById('edit-note-max').value) || 20;
+            const coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+
+            if (isNaN(val) || val < 0 || val > max) {
+                showSnackbar('Note invalide');
+                return;
+            }
+
             if (!note.ghost && note.originalValue === undefined) {
                 note.originalValue = note.value;
                 note.originalMax = note.max;
                 note.originalCoef = note.coef;
             }
 
-            const val = parseFloat(document.getElementById('edit-note-value').value);
-            if (!isNaN(val)) note.value = val;
-
-            note.max = parseFloat(document.getElementById('edit-note-max').value) || 20;
-            note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+            note.value = val;
+            note.max = max;
+            note.coef = coef;
             note.ghost = true;
             
             const db = await dbPromise;
