@@ -776,10 +776,17 @@
             } else {
                 const prenom = userSession?.identity?.prenom || data.auth?.identity?.prenom || '';
                 const nom = userSession?.identity?.nom || data.auth?.identity?.nom || '';
+                const photo = userSession?.identity?.photo || data.auth?.identity?.photo;
                 const fullName = (prenom + ' ' + nom).trim();
+
+                let avatarContent = `<span class="material-symbols-rounded">person</span>`;
+                if (photo && photo.startsWith('data:image')) {
+                    avatarContent = `<img src="${photo}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
-                        <span class="material-symbols-rounded">person</span>
+                        ${avatarContent}
                     </div>
                     <span class="profile-name">${fullName || 'Utilisateur'}</span>
                 `;
@@ -1497,7 +1504,8 @@
                     if (apiData.identity) {
                         data.auth.identity = {
                             prenom: apiData.identity.prenom || data.auth.identity.prenom,
-                            nom: apiData.identity.nom || data.auth.identity.nom
+                            nom: apiData.identity.nom || data.auth.identity.nom,
+                            photo: apiData.identity.photo || data.auth.identity.photo || null
                         };
                     }
 
