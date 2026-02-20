@@ -514,11 +514,15 @@
             if (!hasRealNotes) return;
 
             const allDates = new Set();
+            const currentPeriod = data.calculation.period;
+
             data.subjects.forEach(subject => {
                 subject.notes.forEach(note => {
                     if (!note.ghost && note.date) {
-                        const d = note.date.split('T')[0];
-                        allDates.add(d);
+                        if (currentPeriod === 'all' || note.codePeriode === currentPeriod) {
+                            const d = note.date.split('T')[0];
+                            allDates.add(d);
+                        }
                     }
                 });
             });
@@ -747,7 +751,11 @@
 
         function renderNote(subjectId, note) {
             const isNumeric = typeof note.value === 'number';
-            const valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+            let valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+
+            if (valueDisplay === "" && note.elementsProgramme && note.elementsProgramme.length > 0) {
+                valueDisplay = "--";
+            }
 
             const isModified = note.originalValue !== undefined;
             const isHidden = note.hidden;
@@ -1779,7 +1787,10 @@
                         const allLocalNotes = await db.getAll('notes');
                         const localRealNotes = allLocalNotes.filter(n => !n.id.startsWith('simu-'));
 
-                        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+                        const edNotes = apiData.notes.filter(edNote =>
+                            (edNote.valeur || "").trim() !== "" ||
+                            (edNote.elementsProgramme && edNote.elementsProgramme.some(ep => ["1", "2", "3", "4"].includes(ep.valeur)))
+                        );
                         const notesToPut = [];
                         const seenLocalIds = new Set();
 

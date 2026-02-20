@@ -104,7 +104,10 @@ async function backgroundCheck() {
         const subjects = await db.getAll('subjects');
         const existingIds = new Set(allNotes.map(n => n.id.toString()));
 
-        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+        const edNotes = apiData.notes.filter(edNote =>
+            (edNote.valeur || "").trim() !== "" ||
+            (edNote.elementsProgramme && edNote.elementsProgramme.some(ep => ["1", "2", "3", "4"].includes(ep.valeur)))
+        );
         let newNotesFound = false;
 
         const tx = db.transaction(['notes', 'subjects'], 'readwrite');
