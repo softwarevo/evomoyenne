@@ -10,27 +10,22 @@
     <meta name="apple-mobile-web-app-title" content="evoMoyenne">
 	<meta name="citation_title" content="evoMoyenne">
     <meta name="citation_author" content="evoSoftware">
-	<meta name="keywords" content="EcoleDirecte, Moyenne EcoleDirecte, Moyenne Générale, Moyenne scolaire, Notes EcoleDirecte, evoMoyenne, evo moyenne"
+	<meta name="keywords" content="EcoleDirecte, Moyenne EcoleDirecte, Moyenne Générale, Moyenne scolaire, Notes EcoleDirecte, evoMoyenne, evo moyenne">
     <link rel="apple-touch-icon" href="assets/logos/logo-touch.png">
     <title>evoMoyenne - Calculateur de moyennes intelligent compatible avec EcoleDirecte</title>
-    <meta name="description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel.
-    Fonctionnalités intelligentes.
-    Compatible avec EcoleDirecte.">
+    <meta name="description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel. Fonctionnalités intelligentes. Compatible avec EcoleDirecte.">
+    <link rel="canonical" href="https://evomoyenne.qzz.io/">
     <meta property="og:url" content="https://evomoyenne.qzz.io/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="evoMoyenne - Calculateur de moyennes intelligent compatible avec EcoleDirecte">
-    <meta property="og:description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel.
-    Fonctionnalités intelligentes.
-    Compatible avec EcoleDirecte.">
+    <meta property="og:description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel. Fonctionnalités intelligentes. Compatible avec EcoleDirecte.">
     <meta property="og:image" content="https://i.ibb.co/kgySgbPJ/Design-sans-titre.png">
 	<meta property="og:locale" content="fr_fr">
     <meta name="twitter:card" content="summary_large_image">
     <meta property="twitter:domain" content="evomoyenne.qzz.io">
-    <meta property="twitter:url" content="https://main-evomoyenne.pages.dev/">
+    <meta property="twitter:url" content="https://evomoyenne.qzz.io/">
     <meta name="twitter:title" content="evoMoyenne - Calculateur de moyennes intelligent compatible avec EcoleDirecte">
-    <meta name="twitter:description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel.
-    Fonctionnalités intelligentes.
-    Compatible avec EcoleDirecte.">
+    <meta name="twitter:description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel. Fonctionnalités intelligentes. Compatible avec EcoleDirecte.">
     <meta name="twitter:image" content="https://i.ibb.co/kgySgbPJ/Design-sans-titre.png">
 	<script type="application/ld+json">
     {
@@ -76,21 +71,22 @@
 <body data-theme="dark">
     <div class="app-container">
         <header class="top-bar">
+            <h1 class="visually-hidden">evoMoyenne - Calculateur de moyennes intelligent compatible avec EcoleDirecte</h1>
             <div class="logo-container">
-                <img id="logo-img" src="/assets/logos/logo-b.png" alt="Logo" loading="eager" width="32" height="32">
+                <img id="logo-img" src="/assets/logos/logo-b.png" alt="evoMoyenne Logo" loading="eager" width="32" height="32">
                 <span class="logo-text">evoMoyenne</span>
-				<span class="version-badge" id="version-badge" style="cursor: pointer;">v1.1</span>
+				<span class="version-badge" id="version-badge" style="cursor: pointer;" title="Version de l'application">v1.1</span>
             </div>
 			
             <div class="top-actions">
-                <div class="offline-badge" id="offline-badge">
-                    <span class="material-symbols-rounded">cloud_off</span>
+                <div class="offline-badge" id="offline-badge" role="status" aria-live="polite">
+                    <span class="material-symbols-rounded" aria-hidden="true">cloud_off</span>
                     Hors-ligne
                 </div>
                 <div class="profile-wrapper">
-                    <button class="profile-btn" id="profile-trigger">
+                    <button class="profile-btn" id="profile-trigger" aria-label="Menu profil" aria-haspopup="true" aria-expanded="false">
                         <div class="profile-avatar">
-                            <span class="material-symbols-rounded">person</span>
+                            <span class="material-symbols-rounded" aria-hidden="true">person</span>
                         </div>
                         <span class="profile-name">Prénom Nom</span>
                     </button>
@@ -100,58 +96,58 @@
                         Tu dois te connecter à ton compte EcoleDirecte pour utiliser evoMoyenne.
                     </div>
 
-                    <div class="dropdown-menu" id="profile-dropdown">
-                        <button class="dropdown-item" id="menu-theme-toggle">
-                            <span class="material-symbols-rounded">dark_mode</span>
+                    <nav class="dropdown-menu" id="profile-dropdown" role="menu">
+                        <button class="dropdown-item" id="menu-theme-toggle" role="menuitem">
+                            <span class="material-symbols-rounded" aria-hidden="true">dark_mode</span>
                             <span id="theme-label">Mode Clair</span>
                         </button>
-                        <button class="dropdown-item" id="menu-about-btn">
-                            <span class="material-symbols-rounded">info</span>
+                        <button class="dropdown-item" id="menu-about-btn" role="menuitem">
+                            <span class="material-symbols-rounded" aria-hidden="true">info</span>
                             À propos
                         </button>
-                        <button class="dropdown-item" id="menu-settings-btn">
-                            <span class="material-symbols-rounded">settings</span>
+                        <button class="dropdown-item" id="menu-settings-btn" role="menuitem">
+                            <span class="material-symbols-rounded" aria-hidden="true">settings</span>
                             Paramètres
                         </button>
-                        <div class="dropdown-divider"></div>
-                        <button class="dropdown-item item-danger">
-                            <span class="material-symbols-rounded">logout</span>
+                        <div class="dropdown-divider" role="separator"></div>
+                        <button class="dropdown-item item-danger" role="menuitem">
+                            <span class="material-symbols-rounded" aria-hidden="true">logout</span>
                             Se déconnecter
                         </button>
-                    </div>
+                    </nav>
                 </div>
             </div>
         </header>
 
-        <div class="pages-wrapper">
-            <main class="page" id="page-accueil">
-                <div class="card average-hero" id="average-hero">
-                    <div class="average-label">Moyenne Générale</div>
+        <main class="pages-wrapper" id="pagesWrapper">
+            <section class="page" id="page-accueil">
+                <section class="card average-hero" id="average-hero">
+                    <h2 class="average-label">Moyenne Générale</h2>
                     <div class="average-value" id="average-value">--</div>
                     <div class="average-evolution" id="average-evolution">
-                        <span class="material-symbols-rounded">trending_flat</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">trending_flat</span>
                         <span id="evolution-text">Pas de données</span>
                     </div>
-                </div>
+                </section>
 
-                <div class="card">
+                <section class="card">
                     <h2 class="section-title">
-                        <span class="material-symbols-rounded">show_chart</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">show_chart</span>
                         Évolution
                     </h2>
                     <div class="chart-container">
                         <canvas id="evolution-chart"></canvas>
                     </div>
-                </div>
+                </section>
 
-                <div class="card target-card">
+                <section class="card target-card">
                     <div class="target-header">
                         <h2 class="section-title" style="margin-bottom: 0;">
-                            <span class="material-symbols-rounded">flag</span>
+                            <span class="material-symbols-rounded" aria-hidden="true">flag</span>
                             Objectif
                         </h2>
                         <div class="target-input-container">
-                            <input type="number" class="target-input" id="target-input" min="0" max="20" step="0.01" value="20">
+                            <input type="number" class="target-input" id="target-input" min="0" max="20" step="0.01" value="20" aria-label="Objectif de moyenne">
                             <span>/20</span>
                         </div>
                     </div>
@@ -162,207 +158,208 @@
                         <span id="progress-current">0.00</span>
                         <span id="progress-remaining">Il reste 20.00 pts</span>
                     </div>
-                </div>
+                </section>
 
                 <div class="topflop-grid">
-                    <div class="card topflop-card">
+                    <section class="card topflop-card">
                         <h3 class="topflop-title">
-                            <span class="material-symbols-rounded" style="color: #4caf50;">trending_up</span>
+                            <span class="material-symbols-rounded" style="color: #4caf50;" aria-hidden="true">trending_up</span>
                             Top 3
                         </h3>
-                        <div id="top-list"></div>
-                    </div>
-                    <div class="card topflop-card">
+                        <ul id="top-list" style="list-style: none;"></ul>
+                    </section>
+                    <section class="card topflop-card">
                         <h3 class="topflop-title">
-                            <span class="material-symbols-rounded" style="color: #f44336;">trending_down</span>
+                            <span class="material-symbols-rounded" style="color: #f44336;" aria-hidden="true">trending_down</span>
                             Flop 3
                         </h3>
-                        <div id="flop-list"></div>
-                    </div>
+                        <ul id="flop-list" style="list-style: none;"></ul>
+                    </section>
                 </div>
 
-                <div class="card export-section">
+                <section class="card export-section">
                     <h2 class="section-title">
-                        <span class="material-symbols-rounded">share</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">share</span>
                         Partager
                     </h2>
                     <div class="export-buttons">
-                        <button class="export-btn" id="share-card-btn">
-                            <span class="material-symbols-rounded">image</span>
+                        <button class="export-btn" id="share-card-btn" aria-label="Partager ma moyenne sous forme d'image">
+                            <span class="material-symbols-rounded" aria-hidden="true">image</span>
                             Partage direct
                         </button>
-                        <button class="export-btn" id="export-pdf-btn">
-                            <span class="material-symbols-rounded">description</span>
+                        <button class="export-btn" id="export-pdf-btn" aria-label="Générer un bulletin fictif en PDF">
+                            <span class="material-symbols-rounded" aria-hidden="true">description</span>
                             Bulletin fictif
                         </button>
                     </div>
-                </div>
-            </main>
+                </section>
+            </section>
 
-            <main class="page hidden" id="page-labo">
+            <section class="page hidden" id="page-labo">
                 
-                <div class="card add-note-card">
+                <section class="card add-note-card">
                     <h2 class="section-title">
-                        <span class="material-symbols-rounded">add_circle</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">add_circle</span>
                         Ajouter une note
                     </h2>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Matière</label>
-                            <select class="form-select" id="note-subject">
+                            <label class="form-label" for="note-subject">Matière</label>
+                            <select class="form-select" id="note-subject" aria-label="Sélectionner la matière">
                                 <option value="">Sélectionner...</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group" style="flex: 1;">
-                            <label class="form-label">Note</label>
-                            <input type="number" class="form-input" id="note-value" placeholder="15" min="0" max="20" step="0.01">
+                            <label class="form-label" for="note-value">Note</label>
+                            <input type="number" class="form-input" id="note-value" placeholder="15" min="0" max="20" step="0.01" aria-label="Valeur de la note">
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label class="form-label">Sur</label>
-                            <input type="number" class="form-input" id="note-max" placeholder="20" min="1" max="100" value="20">
+                            <label class="form-label" for="note-max">Sur</label>
+                            <input type="number" class="form-input" id="note-max" placeholder="20" min="1" max="100" value="20" aria-label="Note maximale">
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label class="form-label">Coef</label>
-                            <input type="number" class="form-input" id="note-coef" placeholder="1" min="0.1" max="20" step="0.1" value="1">
+                            <label class="form-label" for="note-coef">Coef</label>
+                            <input type="number" class="form-input" id="note-coef" placeholder="1" min="0.1" max="20" step="0.1" value="1" aria-label="Coefficient de la note">
                         </div>
                     </div>
-                    <button class="add-btn" id="add-note-btn">
-                        <span class="material-symbols-rounded">add</span>
+                    <button class="add-btn" id="add-note-btn" aria-label="Confirmer l'ajout de la note">
+                        <span class="material-symbols-rounded" aria-hidden="true">add</span>
                         Ajouter la note
                     </button>
-                </div>
+                </section>
 
-                <div class="subjects-header">
+                <header class="subjects-header">
                     <h2 class="section-title" style="margin-bottom: 0;">
-                        <span class="material-symbols-rounded">folder</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">folder</span>
                         Mes matières
                     </h2>
-                    <button class="coef-btn" id="coef-dialog-btn">
-                        <span class="material-symbols-rounded">tune</span>
+                    <button class="coef-btn" id="coef-dialog-btn" aria-label="Gérer les coefficients des matières">
+                        <span class="material-symbols-rounded" aria-hidden="true">tune</span>
                         Coefficients
                     </button>
-                </div>
+                </header>
 
                 <div id="subjects-container"></div>
-            </main>
-        </div>
+            </section>
+        </main>
 
-        <nav class="bottom-nav">
-            <button class="nav-item active" data-page="accueil">
+        <nav class="bottom-nav" aria-label="Navigation principale">
+            <button class="nav-item active" data-page="accueil" aria-label="Aller à la page Accueil">
                 <div class="nav-pill">
-                    <span class="material-symbols-rounded filled">home</span>
+                    <span class="material-symbols-rounded filled" aria-hidden="true">home</span>
                 </div>
                 <span class="nav-label">Accueil</span>
             </button>
-            <button class="nav-item" data-page="labo">
+            <button class="nav-item" data-page="labo" aria-label="Aller à la page Labo">
                 <div class="nav-pill">
-                    <span class="material-symbols-rounded">science</span>
+                    <span class="material-symbols-rounded" aria-hidden="true">science</span>
                 </div>
                 <span class="nav-label">Labo</span>
             </button>
         </nav>
     </div>
 
-    <div class="dialog-overlay" id="coef-dialog">
+    <div class="dialog-overlay" id="coef-dialog" role="dialog" aria-labelledby="coef-dialog-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title">Coefficients des matières</h2>
+            <h2 class="dialog-title" id="coef-dialog-title">Coefficients des matières</h2>
             <div id="coef-list"></div>
-            <div class="dialog-actions">
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-secondary" id="close-coef-dialog">Annuler</button>
                 <button class="dialog-btn dialog-btn-primary" id="save-coef-dialog">Enregistrer</button>
-            </div>
+            </footer>
         </div>
     </div>
 
-    <div class="dialog-overlay" id="about-dialog">
+    <div class="dialog-overlay" id="about-dialog" role="dialog" aria-labelledby="about-dialog-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title">À propos</h2>
-            <div class="dialog-content">
+            <h2 class="dialog-title" id="about-dialog-title">À propos</h2>
+            <section class="dialog-content">
                 <p>evoMoyenne sert à calculer votre moyenne générale (et plus) depuis vos notes EcoleDirecte.</p>
-				<p>Nous utilisons notre propre bridge , <a href=https://github.com/softwarevo/evo2ed>evo2ED</a>, basé sur la librairie <a href=https://github.com/louislegrain/api-ecoledirecte>api-ecoledirecte</a>, pour la connexion à EcoleDirecte.
-				<p><strong>TOUT le contenu d'evoMoyenne</strong> est eopen-source, du site lui même au bridge.
+				<p>Nous utilisons notre propre bridge, <a href="https://github.com/softwarevo/evo2ed" target="_blank" rel="noopener noreferrer" title="Consulter le dépôt GitHub de evo2ED">evo2ED</a>, basé sur la librairie <a href="https://github.com/louislegrain/api-ecoledirecte" target="_blank" rel="noopener noreferrer" title="Consulter le dépôt GitHub de api-ecoledirecte">api-ecoledirecte</a>, pour la connexion à EcoleDirecte.</p>
+				<p><strong>TOUT le contenu d'evoMoyenne</strong> est open-source, du site lui-même au bridge.</p>
                 <p style="margin-top: 16px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Version 1.1</p>
-            </div>
-            <div class="dialog-actions">
+            </section>
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-about-dialog">Fermer</button>
-            </div>
+            </footer>
         </div>
     </div>
 
-    <div class="dialog-overlay" id="settings-dialog">
+    <div class="dialog-overlay" id="settings-dialog" role="dialog" aria-labelledby="settings-dialog-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title">Paramètres</h2>
-            <div class="dialog-content">
-                <div class="ghost-toggle" id="dont-save-toggle" style="padding: 12px 0; cursor: pointer;">
+            <h2 class="dialog-title" id="settings-dialog-title">Paramètres</h2>
+            <section class="dialog-content">
+                <div class="ghost-toggle" id="dont-save-toggle" style="padding: 12px 0; cursor: pointer;" role="button" aria-pressed="false" aria-label="Ne pas enregistrer de données localement">
                     <div class="checkbox-m3" id="dont-save-checkbox">
-                        <span class="material-symbols-rounded filled">check</span>
+                        <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                     </div>
-                    <label class="ghost-toggle-label" style="cursor: pointer;">Ne pas enregistrer de données localement</label>
+                    <span class="ghost-toggle-label" style="cursor: pointer;">Ne pas enregistrer de données localement</span>
                 </div>
                 <p style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">
                     Si cette option est activée, aucune donnée ne sera sauvegardée dans votre navigateur. Tout sera perdu à la fermeture de l'onglet.
                 </p>
-            </div>
-            <div class="dialog-actions">
+            </section>
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-settings-dialog">Fermer</button>
-            </div>
+            </footer>
         </div>
     </div>
 
-    <div class="dialog-overlay" id="share-dialog">
+    <div class="dialog-overlay" id="share-dialog" role="dialog" aria-labelledby="share-dialog-title" aria-modal="true">
         <div class="dialog" style="max-width: 360px;">
-            <h2 class="dialog-title">Créer ta carte de partage</h2>
-            <div class="share-card-container" id="share-form">
+            <h2 class="dialog-title" id="share-dialog-title">Créer ta carte de partage</h2>
+            <section class="share-card-container" id="share-form">
                 <div class="share-input-group">
+                    <label class="visually-hidden" for="share-name">Ton prénom</label>
                     <input type="text" class="share-input" id="share-name" placeholder="Ton prénom" maxlength="20">
                 </div>
                 <p style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Choisis un emoji</p>
                 <div class="emoji-picker" id="emoji-picker"></div>
-            </div>
+            </section>
             <div id="share-preview" style="display: none;"></div>
-            <div class="dialog-actions">
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-secondary" id="close-share-dialog">Fermer</button>
                 <button class="dialog-btn dialog-btn-primary" id="generate-share-card">Générer</button>
-            </div>
+            </footer>
         </div>
     </div>
 
-    <div class="dialog-overlay" id="edit-dialog">
+    <div class="dialog-overlay" id="edit-dialog" role="dialog" aria-labelledby="edit-dialog-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title">Modifier la note</h2>
+            <h2 class="dialog-title" id="edit-dialog-title">Modifier la note</h2>
             <div class="form-row" style="flex-direction: column; gap: 16px;">
                 <div class="form-group">
-                    <label class="form-label">Note</label>
-                    <input type="number" class="form-input" id="edit-note-value" min="0" max="20" step="0.01">
+                    <label class="form-label" for="edit-note-value">Note</label>
+                    <input type="number" class="form-input" id="edit-note-value" min="0" max="20" step="0.01" aria-label="Modifier la valeur de la note">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Sur</label>
-                    <input type="number" class="form-input" id="edit-note-max" min="1" max="100">
+                    <label class="form-label" for="edit-note-max">Sur</label>
+                    <input type="number" class="form-input" id="edit-note-max" min="1" max="100" aria-label="Modifier la note maximale">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Coefficient</label>
-                    <input type="number" class="form-input" id="edit-note-coef" min="0.1" max="20" step="0.1">
+                    <label class="form-label" for="edit-note-coef">Coefficient</label>
+                    <input type="number" class="form-input" id="edit-note-coef" min="0.1" max="20" step="0.1" aria-label="Modifier le coefficient">
                 </div>
-                <div class="ghost-toggle" style="padding: 0; display: none;">
+                <div class="ghost-toggle" style="padding: 0; display: none;" role="button" aria-pressed="false" aria-label="Note fantôme (simulation)">
                     <div class="checkbox-m3" id="edit-ghost-checkbox">
-                        <span class="material-symbols-rounded filled">check</span>
+                        <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                     </div>
-                    <label class="ghost-toggle-label">Note fantôme (simulation)</label>
+                    <span class="ghost-toggle-label">Note fantôme (simulation)</span>
                 </div>
             </div>
-            <div class="dialog-actions">
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-secondary" id="close-edit-dialog">Annuler</button>
                 <button class="dialog-btn dialog-btn-primary" id="save-edit-dialog">Enregistrer</button>
-            </div>
+            </footer>
         </div>
     </div>
 
-	<div class="dialog-overlay" id="release-notes-dialog">
+	<div class="dialog-overlay" id="release-notes-dialog" role="dialog" aria-labelledby="release-notes-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title">Notes de version (v1.1)</h2>
-            <div class="dialog-content" style="max-height: 300px; overflow-y: auto; text-align: left;">
+            <h2 class="dialog-title" id="release-notes-title">Notes de version (v1.1)</h2>
+            <section class="dialog-content" style="max-height: 300px; overflow-y: auto; text-align: left;">
                 <p><strong>Nouveautés :</strong></p>
                 <ul style="padding-left: 20px; margin-top: 8px;">
                     <li>👤 Connexion EcoleDirecte : Vous pouvez enfin vous connecter à EcoleDirecte !</li>
@@ -370,10 +367,10 @@
 					<li>🛠️ Divers autres fixs</li>
                 </ul>
 				<p>Si vous trouvez un bug, n'hésitez pas à nous le signaler en personne, sur le <a href="https://github.evomoyenne.qzz.io">Github</a> ou sur <a href="mailto:contact@evomoyenne.qzz.io">contact@evomoyenne.qzz.io</a> !</p>
-            </div>
-            <div class="dialog-actions">
+            </section>
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-release-notes">Génial !</button>
-            </div>
+            </footer>
         </div>
     </div>
 
