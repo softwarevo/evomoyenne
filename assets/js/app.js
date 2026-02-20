@@ -443,18 +443,18 @@
             const flopList = document.getElementById('flop-list');
             
             topList.innerHTML = top.map(s => `
-                <div class="topflop-item">
+                <li class="topflop-item">
                     <span class="topflop-subject">${s.name}</span>
                     <span class="topflop-average" style="color: #4caf50;">${s.avg.toFixed(2)}</span>
-                </div>
-            `).join('') || '<p style="font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Aucune note</p>';
+                </li>
+            `).join('') || '<li style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); list-style: none;">Aucune note</li>';
             
             flopList.innerHTML = flop.map(s => `
-                <div class="topflop-item">
+                <li class="topflop-item">
                     <span class="topflop-subject">${s.name}</span>
                     <span class="topflop-average" style="color: #f44336;">${s.avg.toFixed(2)}</span>
-                </div>
-            `).join('') || '<p style="font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Aucune note</p>';
+                </li>
+            `).join('') || '<li style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); list-style: none;">Aucune note</li>';
         }
 
         function updateSubjectSelect() {
@@ -483,31 +483,31 @@
                 const hasMore = subject.notes.length > 3;
                 
                 return `
-                    <div class="card subject-card" data-subject="${subject.id}">
-                        <div class="subject-header">
-                            <div class="subject-info" onclick="toggleSubject('${subject.id}')">
+                    <section class="card subject-card" data-subject="${subject.id}">
+                        <header class="subject-header">
+                            <div class="subject-info" onclick="toggleSubject('${subject.id}')" role="button" aria-expanded="false" aria-label="Afficher les notes de ${subject.name}">
                                 <div class="subject-name">
                                     ${subject.name}
                                     <span class="subject-coef">×${subject.coef}</span>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')">${avg !== null ? avg.toFixed(2) : '--'}</div>
+                                <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')" role="button" aria-label="Moyenne de ${subject.name}: ${avg !== null ? avg.toFixed(2) : 'N/A'}">${avg !== null ? avg.toFixed(2) : '--'}</div>
                             </div>
-                        </div>
+                        </header>
                         <div class="notes-list" id="notes-${subject.id}" style="display: none;">
                             ${subject.notes.length === 0 ? 
                                 '<p style="text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 16px 0;">Aucune note</p>' :
                                 recentNotes.map(note => renderNote(subject.id, note)).join('')
                             }
                             ${hasMore ? `
-                                <button class="see-all-btn" onclick="showAllNotes('${subject.id}')">
-                                    <span class="material-symbols-rounded">expand_more</span>
+                                <button class="see-all-btn" onclick="showAllNotes('${subject.id}')" aria-label="Voir toutes les notes de ${subject.name}">
+                                    <span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
                                     Voir tout (${subject.notes.length} notes)
                                 </button>
                             ` : ''}
                         </div>
-                    </div>
+                    </section>
                 `;
             }).join('');
         }
@@ -535,20 +535,20 @@
             const actionClass = isPureGhost ? 'delete' : 'hide-note';
 
             return `
-                <div class="note-item ${itemClass} ${ghostClass} ${hiddenClass}" data-note="${note.id}">
+                <article class="note-item ${itemClass} ${ghostClass} ${hiddenClass}" data-note="${note.id}">
                     <div class="note-info ${infoClass}">
                         <span class="note-value">${valueDisplay}</span>
                         <span class="note-details">${details}</span>
                     </div>
                     <div class="note-actions">
-                        <button class="note-action-btn" onclick="editNote('${subjectId}', '${note.id}')" title="Modifier">
-                            <span class="material-symbols-rounded">edit</span>
+                        <button class="note-action-btn" onclick="editNote('${subjectId}', '${note.id}')" title="Modifier" aria-label="Modifier la note">
+                            <span class="material-symbols-rounded" aria-hidden="true">edit</span>
                         </button>
-                        <button class="note-action-btn ${actionClass}" onclick="deleteNote('${subjectId}', '${note.id}')" title="${actionTitle}">
-                            <span class="material-symbols-rounded">${actionIcon}</span>
+                        <button class="note-action-btn ${actionClass}" onclick="deleteNote('${subjectId}', '${note.id}')" title="${actionTitle}" aria-label="${actionTitle} la note">
+                            <span class="material-symbols-rounded" aria-hidden="true">${actionIcon}</span>
                         </button>
                     </div>
-                </div>
+                </article>
             `;
         }
 
@@ -602,39 +602,39 @@
                 showLoginTip();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
-                        <span class="material-symbols-rounded">login</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">login</span>
                     </div>
                     <span class="profile-name">Se connecter</span>
                 `;
 
                 dropdown.innerHTML = `
                     <div class="login-container">
-                        <h3 class="dropdown-title">Connexion</h3>
+                        <h2 class="dropdown-title">Connexion</h2>
                         <div class="form-group">
-                            <input type="text" class="form-input small-input" placeholder="Identifiant">
+                            <input type="text" class="form-input small-input" placeholder="Identifiant" aria-label="Identifiant EcoleDirecte">
                         </div>
                         <div class="form-group">
-                            <input type="password" class="form-input small-input" placeholder="Mot de passe">
+                            <input type="password" class="form-input small-input" placeholder="Mot de passe" aria-label="Mot de passe EcoleDirecte">
                         </div>
-                        <div class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;">
+                        <div class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;" role="button" aria-pressed="true" aria-label="Souvenez-vous de moi">
                             <div class="checkbox-m3 checked" id="remember-me-checkbox">
-                                <span class="material-symbols-rounded filled">check</span>
+                                <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                             </div>
-                            <label class="ghost-toggle-label" style="font-size: 13px; cursor: pointer;">Souvenez-vous de moi</label>
+                            <span class="ghost-toggle-label" style="font-size: 13px; cursor: pointer;">Souvenez-vous de moi</span>
                         </div>
                         <div id="remember-me-disclaimer" style="display: none; font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; margin-bottom: 4px; padding-left: 32px; line-height: 1.2;">
                             Vous pouvez désactiver cette option dans les paramètres
                         </div>
-                        <button class="add-btn" id="login-submit-btn">
+                        <button class="add-btn" id="login-submit-btn" aria-label="Valider la connexion">
                             Valider
                         </button>
-                        <div class="dropdown-divider"></div>
-                        <button class="dropdown-item" id="menu-about-btn">
-                            <span class="material-symbols-rounded">info</span>
+                        <div class="dropdown-divider" role="separator"></div>
+                        <button class="dropdown-item" id="menu-about-btn" role="menuitem">
+                            <span class="material-symbols-rounded" aria-hidden="true">info</span>
                             À propos
                         </button>
-                        <button class="dropdown-item" id="menu-settings-btn">
-                            <span class="material-symbols-rounded">settings</span>
+                        <button class="dropdown-item" id="menu-settings-btn" role="menuitem">
+                            <span class="material-symbols-rounded" aria-hidden="true">settings</span>
                             Paramètres
                         </button>
                     </div>
@@ -645,27 +645,27 @@
                 const fullName = (prenom + ' ' + nom).trim();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
-                        <span class="material-symbols-rounded">person</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">person</span>
                     </div>
                     <span class="profile-name">${fullName || 'Utilisateur'}</span>
                 `;
 
                 dropdown.innerHTML = `
-                    <button class="dropdown-item" id="menu-theme-toggle">
-                        <span class="material-symbols-rounded">${data.theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+                    <button class="dropdown-item" id="menu-theme-toggle" role="menuitem">
+                        <span class="material-symbols-rounded" aria-hidden="true">${data.theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
                         <span id="theme-label">${data.theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}</span>
                     </button>
-                    <button class="dropdown-item" id="menu-about-btn">
-                        <span class="material-symbols-rounded">info</span>
+                    <button class="dropdown-item" id="menu-about-btn" role="menuitem">
+                        <span class="material-symbols-rounded" aria-hidden="true">info</span>
                         À propos
                     </button>
-                    <button class="dropdown-item" id="menu-settings-btn">
-                        <span class="material-symbols-rounded">settings</span>
+                    <button class="dropdown-item" id="menu-settings-btn" role="menuitem">
+                        <span class="material-symbols-rounded" aria-hidden="true">settings</span>
                         Paramètres
                     </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="dropdown-item item-danger" id="logout-btn">
-                        <span class="material-symbols-rounded">logout</span>
+                    <div class="dropdown-divider" role="separator"></div>
+                    <button class="dropdown-item item-danger" id="logout-btn" role="menuitem">
+                        <span class="material-symbols-rounded" aria-hidden="true">logout</span>
                         Se déconnecter
                     </button>
                 `;
