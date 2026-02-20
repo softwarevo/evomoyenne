@@ -136,6 +136,10 @@ async function backgroundCheck() {
                 const max = parseFloat((edNote.noteSur || "").replace(',', '.')) || 20;
                 const coef = parseFloat(edNote.coef) === 0 ? 1 : (parseFloat(edNote.coef) || 1);
 
+                const elementsProgramme = (edNote.elementsProgramme || [])
+                    .filter(ep => ep.valeur && ["1", "2", "3", "4"].includes(ep.valeur))
+                    .map(ep => ep.valeur);
+
                 const newNoteData = {
                     id: edId,
                     subjectId: subject.id,
@@ -144,7 +148,9 @@ async function backgroundCheck() {
                     coef: coef,
                     ghost: false,
                     date: edNote.date || new Date().toISOString(),
-                    title: edNote.devoir || ""
+                    title: edNote.devoir || "",
+                    codePeriode: edNote.codePeriode || "",
+                    elementsProgramme: elementsProgramme
                 };
 
                 await notesStore.put(newNoteData);
