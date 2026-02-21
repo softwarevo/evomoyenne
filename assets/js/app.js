@@ -712,12 +712,19 @@
                 `;
                 return;
             }
+
+            const currentPeriod = data.calculation.period;
             
             container.innerHTML = data.subjects.map(subject => {
+                let notes = subject.notes;
+                if (currentPeriod && currentPeriod !== 'all') {
+                    notes = subject.notes.filter(n => n.codePeriode === currentPeriod);
+                }
+
                 const avg = calculateSubjectAverage(subject);
-                const hasGhosts = subject.notes.some(n => n.ghost || n.hidden);
-                const recentNotes = subject.notes.slice(-3).reverse();
-                const hasMore = subject.notes.length > 3;
+                const hasGhosts = notes.some(n => n.ghost || n.hidden);
+                const recentNotes = notes.slice(-3).reverse();
+                const hasMore = notes.length > 3;
                 
                 return `
                     <div class="card subject-card" data-subject="${subject.id}">
@@ -733,14 +740,14 @@
                             </div>
                         </div>
                         <div class="notes-list" id="notes-${subject.id}" style="display: none;">
-                            ${subject.notes.length === 0 ? 
+                            ${notes.length === 0 ?
                                 '<p style="text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 16px 0;">Aucune note</p>' :
                                 recentNotes.map(note => renderNote(subject.id, note)).join('')
                             }
                             ${hasMore ? `
                                 <button class="see-all-btn" onclick="showAllNotes('${subject.id}')">
                                     <span class="material-symbols-rounded">expand_more</span>
-                                    Voir tout (${subject.notes.length} notes)
+                                    Voir tout (${notes.length} notes)
                                 </button>
                             ` : ''}
                         </div>
@@ -817,9 +824,15 @@
         function showAllNotes(subjectId) {
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
+
+            const currentPeriod = data.calculation.period;
+            let notes = subject.notes;
+            if (currentPeriod && currentPeriod !== 'all') {
+                notes = subject.notes.filter(n => n.codePeriode === currentPeriod);
+            }
             
             const notesList = document.getElementById(`notes-${subjectId}`);
-            notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
+            notesList.innerHTML = notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
         }
 
         function showLoginTip() {
