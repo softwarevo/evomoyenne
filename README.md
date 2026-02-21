@@ -18,8 +18,14 @@ Voici les prochaines étapes du développement :
 - [ ] **UX update** : Onboardings, plusieurs pages, séries, db, thèmes...
 - [ ] **evoAI** : Appréciations, scores, coefs automatiques, prédictions de notes et plus, générés par un modèle d'IA spécial !
 
+## 🐛 Bugs connus
+- 🔎 **EN INVESTIGATION** Sur certains appareils, evoMoyenne s'affiche mais ne répond pas. Nous avons vaguement identifié l'erreur, **n'hésitez pas à nous partager des infos** en [créant une issue](https://github.com/softwarevo/evomoyenne/issues/new) ou par mail à [contact@evomoyenne.qzz.io](mailto:contact@evomoyenne.qzz.io) !
+- ⏱️ **EN ATTENTE** La synchronisation ne fonctionne pas. Nous avons tout ce qu'il nous faut pour régler cette erreur, ce sera réparé bientôt ! En attendant, **vous devrez vous déconnecter** puis vous reconnecter pour synchroniser evoMoyenne.
+- ❌ **PAS PRÉVU** Le site ne se charge pas en mode navigation privée sur certains navigateurs. Nous n'avons pas prévu de régler ce problème.
+
 ## 🌐 Site web
-evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
+evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**.
+Si vous souhaitez tester la version bêta d'evoMoyenne, rendez-vous sur [beta.evomoyenne.qzz.io](https://beta.evomoyenne.qzz.io) ! **CETTE VERSION PEUT ÊTE INSTABLE**.
 
 ## ☁️ Version
 evoMoyenne est actuellement sous sa version 1.1.
