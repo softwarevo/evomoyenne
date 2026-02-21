@@ -15,7 +15,7 @@
 
 ## 🗺️ Roadmap
 Voici les prochaines étapes du développement :
-- [ ] **UX update** : Onboardings, plusieurs pages, séries, db, thèmes...
+- [ ] **UX update** : Onboardings, plusieurs pages, séries, db, thèmes, meilleure expérience...
 - [ ] **evoAI** : Appréciations, scores, coefs automatiques, prédictions de notes et plus, générés par un modèle d'IA spécial !
 
 ## 🐛 Bugs connus
@@ -25,7 +25,7 @@ Voici les prochaines étapes du développement :
 
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**.
-Si vous souhaitez tester la version bêta d'evoMoyenne, rendez-vous sur [beta.evomoyenne.qzz.io](https://beta.evomoyenne.qzz.io) ! **CETTE VERSION PEUT ÊTE INSTABLE**.
+Si vous souhaitez tester la version bêta d'evoMoyenne, rendez-vous sur [beta.evomoyenne.qzz.io](https://beta.evomoyenne.qzz.io) ! **CETTE VERSION PEUT ÊTRE INSTABLE**.
 
 ## ☁️ Version
 evoMoyenne est actuellement sous sa version 1.1.
