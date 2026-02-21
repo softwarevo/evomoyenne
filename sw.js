@@ -104,7 +104,10 @@ async function backgroundCheck() {
         const subjects = await db.getAll('subjects');
         const existingIds = new Set(allNotes.map(n => n.id.toString()));
 
-        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+        const edNotes = apiData.notes.filter(edNote =>
+            (edNote.valeur || "").trim() !== "" ||
+            (edNote.elementsProgramme && edNote.elementsProgramme.some(ep => ["1", "2", "3", "4"].includes(ep.valeur)))
+        );
         let newNotesFound = false;
 
         const tx = db.transaction(['notes', 'subjects'], 'readwrite');
@@ -136,6 +139,10 @@ async function backgroundCheck() {
                 const max = parseFloat((edNote.noteSur || "").replace(',', '.')) || 20;
                 const coef = parseFloat(edNote.coef) === 0 ? 1 : (parseFloat(edNote.coef) || 1);
 
+                const elementsProgramme = (edNote.elementsProgramme || [])
+                    .filter(ep => ep.valeur && ["1", "2", "3", "4"].includes(ep.valeur))
+                    .map(ep => ep.valeur);
+
                 const newNoteData = {
                     id: edId,
                     subjectId: subject.id,
@@ -144,7 +151,9 @@ async function backgroundCheck() {
                     coef: coef,
                     ghost: false,
                     date: edNote.date || new Date().toISOString(),
-                    title: edNote.devoir || ""
+                    title: edNote.devoir || "",
+                    codePeriode: edNote.codePeriode || "",
+                    elementsProgramme: elementsProgramme
                 };
 
                 await notesStore.put(newNoteData);

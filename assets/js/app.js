@@ -23,7 +23,9 @@
                 generalMode: 'weighted',
                 generalTruncated: false,
                 subjectMode: 'weighted',
-                subjectTruncated: false
+                subjectTruncated: false,
+                countCompetencies: 'uniquement_si_vide',
+                period: 'all'
             },
             auth: {
                 token: null,
@@ -279,32 +281,62 @@
                 notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
             }
 
-            notes = notes.filter(n => typeof n.value === 'number');
-            if (notes.length === 0) return null;
+            if (calcSettings.period && calcSettings.period !== 'all') {
+                notes = notes.filter(n => n.codePeriode === calcSettings.period);
+            }
+
+            let effectiveItems = [];
+            notes.forEach(n => {
+                const isNumeric = typeof n.value === 'number';
+                const comps = n.elementsProgramme || [];
+
+                if (isNumeric) {
+                    effectiveItems.push({
+                        valueOn20: (n.value / n.max) * 20,
+                        coef: Number(n.coef)
+                    });
+                    if (calcSettings.countCompetencies === 'toujours') {
+                        comps.forEach(c => {
+                            effectiveItems.push({
+                                valueOn20: Number(c) * 5,
+                                coef: Number(n.coef)
+                            });
+                        });
+                    }
+                } else if (comps.length > 0 && calcSettings.countCompetencies !== 'jamais') {
+                    comps.forEach(c => {
+                        effectiveItems.push({
+                            valueOn20: Number(c) * 5,
+                            coef: Number(n.coef)
+                        });
+                    });
+                }
+            });
+
+            if (effectiveItems.length === 0) return null;
 
             if (calcSettings.subjectMode === 'median') {
-                const items = notes.map(n => ({
-                    value: (n.value / n.max) * 20,
-                    weight: Number(n.coef)
+                const items = effectiveItems.map(item => ({
+                    value: item.valueOn20,
+                    weight: item.coef
                 }));
                 return calculateWeightedMedian(items);
             } else {
                 // weighted
-                let effectiveNotes = [...notes];
-                if (calcSettings.subjectTruncated && effectiveNotes.length >= 2) {
-                    effectiveNotes.sort((a, b) => (a.value / a.max) - (b.value / b.max));
-                    const secondMin = { ...effectiveNotes[1] };
-                    const secondMax = { ...effectiveNotes[effectiveNotes.length - 2] };
-                    effectiveNotes[0] = secondMin;
-                    effectiveNotes[effectiveNotes.length - 1] = secondMax;
+                let items = [...effectiveItems];
+                if (calcSettings.subjectTruncated && items.length >= 2) {
+                    items.sort((a, b) => a.valueOn20 - b.valueOn20);
+                    const secondMin = { ...items[1] };
+                    const secondMax = { ...items[items.length - 2] };
+                    items[0] = secondMin;
+                    items[items.length - 1] = secondMax;
                 }
 
                 let totalWeighted = 0;
                 let totalCoef = 0;
-                effectiveNotes.forEach(note => {
-                    const normalized = (note.value / note.max) * 20;
-                    totalWeighted += normalized * note.coef;
-                    totalCoef += note.coef;
+                items.forEach(item => {
+                    totalWeighted += item.valueOn20 * item.coef;
+                    totalCoef += item.coef;
                 });
                 return totalCoef > 0 ? totalWeighted / totalCoef : null;
             }
@@ -315,12 +347,19 @@
             let subjCalcSettings = data.calculation;
 
             if (forceOfficial) {
-                calcSettings = { generalMode: 'subjects', generalTruncated: false };
-                subjCalcSettings = { subjectMode: 'weighted', subjectTruncated: false };
+                calcSettings = { generalMode: 'subjects', generalTruncated: false, countCompetencies: 'uniquement_si_vide', period: 'all' };
+                subjCalcSettings = { subjectMode: 'weighted', subjectTruncated: false, countCompetencies: 'uniquement_si_vide', period: 'all' };
+
+                const periods = getPeriods();
+                if (periods.length > 0) {
+                    const latest = periods[periods.length - 1];
+                    calcSettings.period = latest.code;
+                    subjCalcSettings.period = latest.code;
+                }
             }
 
             if (calcSettings.generalMode === 'weighted') {
-                let allNotes = [];
+                let allItems = [];
                 data.subjects.forEach(subject => {
                     let notes = (subject.notes || []).filter(n => !n.hidden);
                     if (!includeGhost) notes = notes.filter(n => !n.ghost);
@@ -328,28 +367,52 @@
                         const atDateTime = new Date(atDate).getTime();
                         notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
                     }
-                    notes = notes.filter(n => typeof n.value === 'number');
+                    if (calcSettings.period && calcSettings.period !== 'all') {
+                        notes = notes.filter(n => n.codePeriode === calcSettings.period);
+                    }
+
                     notes.forEach(n => {
-                        allNotes.push({
-                            valueOn20: (n.value / n.max) * 20,
-                            coef: Number(n.coef) * Number(subject.coef || 1)
-                        });
+                        const isNumeric = typeof n.value === 'number';
+                        const comps = n.elementsProgramme || [];
+                        const baseCoef = Number(n.coef) * Number(subject.coef || 1);
+
+                        if (isNumeric) {
+                            allItems.push({
+                                valueOn20: (n.value / n.max) * 20,
+                                coef: baseCoef
+                            });
+                            if (calcSettings.countCompetencies === 'toujours') {
+                                comps.forEach(c => {
+                                    allItems.push({
+                                        valueOn20: Number(c) * 5,
+                                        coef: baseCoef
+                                    });
+                                });
+                            }
+                        } else if (comps.length > 0 && calcSettings.countCompetencies !== 'jamais') {
+                            comps.forEach(c => {
+                                allItems.push({
+                                    valueOn20: Number(c) * 5,
+                                    coef: baseCoef
+                                });
+                            });
+                        }
                     });
                 });
 
-                if (allNotes.length === 0) return null;
+                if (allItems.length === 0) return null;
 
-                if (calcSettings.generalTruncated && allNotes.length >= 2) {
-                    allNotes.sort((a, b) => a.valueOn20 - b.valueOn20);
-                    const secondMin = { ...allNotes[1] };
-                    const secondMax = { ...allNotes[allNotes.length - 2] };
-                    allNotes[0] = secondMin;
-                    allNotes[allNotes.length - 1] = secondMax;
+                if (calcSettings.generalTruncated && allItems.length >= 2) {
+                    allItems.sort((a, b) => a.valueOn20 - b.valueOn20);
+                    const secondMin = { ...allItems[1] };
+                    const secondMax = { ...allItems[allItems.length - 2] };
+                    allItems[0] = secondMin;
+                    allItems[allItems.length - 1] = secondMax;
                 }
 
                 let totalPoints = 0;
                 let totalCoefs = 0;
-                allNotes.forEach(n => {
+                allItems.forEach(n => {
                     totalPoints += n.valueOn20 * n.coef;
                     totalCoefs += n.coef;
                 });
@@ -390,12 +453,36 @@
                         const atDateTime = new Date(atDate).getTime();
                         notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
                     }
-                    notes = notes.filter(n => typeof n.value === 'number');
+                    if (calcSettings.period && calcSettings.period !== 'all') {
+                        notes = notes.filter(n => n.codePeriode === calcSettings.period);
+                    }
+
                     notes.forEach(n => {
-                        allItems.push({
-                            value: (n.value / n.max) * 20,
-                            weight: Number(n.coef) * Number(subject.coef || 1)
-                        });
+                        const isNumeric = typeof n.value === 'number';
+                        const comps = n.elementsProgramme || [];
+                        const baseCoef = Number(n.coef) * Number(subject.coef || 1);
+
+                        if (isNumeric) {
+                            allItems.push({
+                                value: (n.value / n.max) * 20,
+                                weight: baseCoef
+                            });
+                            if (calcSettings.countCompetencies === 'toujours') {
+                                comps.forEach(c => {
+                                    allItems.push({
+                                        value: Number(c) * 5,
+                                        weight: baseCoef
+                                    });
+                                });
+                            }
+                        } else if (comps.length > 0 && calcSettings.countCompetencies !== 'jamais') {
+                            comps.forEach(c => {
+                                allItems.push({
+                                    value: Number(c) * 5,
+                                    weight: baseCoef
+                                });
+                            });
+                        }
                     });
                 });
 
@@ -427,11 +514,15 @@
             if (!hasRealNotes) return;
 
             const allDates = new Set();
+            const currentPeriod = data.calculation.period;
+
             data.subjects.forEach(subject => {
                 subject.notes.forEach(note => {
                     if (!note.ghost && note.date) {
-                        const d = note.date.split('T')[0];
-                        allDates.add(d);
+                        if (currentPeriod === 'all' || note.codePeriode === currentPeriod) {
+                            const d = note.date.split('T')[0];
+                            allDates.add(d);
+                        }
                     }
                 });
             });
@@ -451,6 +542,35 @@
 
         function hasGhostNotes() {
             return data.subjects.some(s => s.notes.some(n => n.ghost || n.hidden));
+        }
+
+        function getPeriods() {
+            const periodLatestDates = {};
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    const code = note.codePeriode;
+                    if (code) {
+                        const noteDate = new Date(note.date).getTime();
+                        if (!periodLatestDates[code] || noteDate > periodLatestDates[code]) {
+                            periodLatestDates[code] = noteDate;
+                        }
+                    }
+                });
+            });
+
+            const codes = Object.keys(periodLatestDates);
+            if (codes.length === 0) return [];
+
+            // Sort codes by their latest note date
+            codes.sort((a, b) => periodLatestDates[a] - periodLatestDates[b]);
+
+            const periods = codes.map((code, index) => ({
+                code: code,
+                name: `Période ${index + 1}`,
+                isLatest: index === codes.length - 1
+            }));
+
+            return periods;
         }
 
         function getEvolution() {
@@ -592,12 +712,19 @@
                 `;
                 return;
             }
+
+            const currentPeriod = data.calculation.period;
             
             container.innerHTML = data.subjects.map(subject => {
+                let notes = subject.notes;
+                if (currentPeriod && currentPeriod !== 'all') {
+                    notes = subject.notes.filter(n => n.codePeriode === currentPeriod);
+                }
+
                 const avg = calculateSubjectAverage(subject);
-                const hasGhosts = subject.notes.some(n => n.ghost || n.hidden);
-                const recentNotes = subject.notes.slice(-3).reverse();
-                const hasMore = subject.notes.length > 3;
+                const hasGhosts = notes.some(n => n.ghost || n.hidden);
+                const recentNotes = notes.slice(-3).reverse();
+                const hasMore = notes.length > 3;
                 
                 return `
                     <div class="card subject-card" data-subject="${subject.id}">
@@ -613,14 +740,14 @@
                             </div>
                         </div>
                         <div class="notes-list" id="notes-${subject.id}" style="display: none;">
-                            ${subject.notes.length === 0 ? 
+                            ${notes.length === 0 ?
                                 '<p style="text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 16px 0;">Aucune note</p>' :
                                 recentNotes.map(note => renderNote(subject.id, note)).join('')
                             }
                             ${hasMore ? `
                                 <button class="see-all-btn" onclick="showAllNotes('${subject.id}')">
                                     <span class="material-symbols-rounded">expand_more</span>
-                                    Voir tout (${subject.notes.length} notes)
+                                    Voir tout (${notes.length} notes)
                                 </button>
                             ` : ''}
                         </div>
@@ -631,15 +758,31 @@
 
         function renderNote(subjectId, note) {
             const isNumeric = typeof note.value === 'number';
-            const valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+            let valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+
+            if (valueDisplay === "" && note.elementsProgramme && note.elementsProgramme.length > 0) {
+                valueDisplay = "--";
+            }
 
             const isModified = note.originalValue !== undefined;
             const isHidden = note.hidden;
 
             let details = `Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}`;
+            if (note.title) {
+                details += ` • ${note.title}`;
+            }
             if (isModified) {
                 details += ` (Original: ${note.originalValue}/${note.originalMax})`;
             }
+
+            const compPills = (note.elementsProgramme || []).map(val => {
+                let colorClass = '';
+                if (val === '1') colorClass = 'comp-red';
+                else if (val === '2') colorClass = 'comp-yellow';
+                else if (val === '3') colorClass = 'comp-green';
+                else if (val === '4') colorClass = 'comp-blue';
+                return `<span class="comp-pill ${colorClass}"></span>`;
+            }).join('');
 
             const isPureGhost = note.ghost && !isModified;
             const itemClass = (note.ghost || isHidden) ? 'ghost' : '';
@@ -654,7 +797,10 @@
             return `
                 <div class="note-item ${itemClass} ${ghostClass} ${hiddenClass}" data-note="${note.id}">
                     <div class="note-info ${infoClass}">
-                        <span class="note-value">${valueDisplay}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="note-value">${valueDisplay}</span>
+                            <div class="comp-pills-container">${compPills}</div>
+                        </div>
                         <span class="note-details">${details}</span>
                     </div>
                     <div class="note-actions">
@@ -678,9 +824,15 @@
         function showAllNotes(subjectId) {
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
+
+            const currentPeriod = data.calculation.period;
+            let notes = subject.notes;
+            if (currentPeriod && currentPeriod !== 'all') {
+                notes = subject.notes.filter(n => n.codePeriode === currentPeriod);
+            }
             
             const notesList = document.getElementById(`notes-${subjectId}`);
-            notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
+            notesList.innerHTML = notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
         }
 
         function showLoginTip() {
@@ -724,15 +876,45 @@
             const subTrunc = document.getElementById('subject-truncated-checkbox');
             if (data.calculation.subjectTruncated) subTrunc.classList.add('checked');
             else subTrunc.classList.remove('checked');
+
+            // Update competencies
+            const compSelect = document.getElementById('count-competencies-select');
+            if (compSelect) {
+                compSelect.value = data.calculation.countCompetencies || 'uniquement_si_vide';
+            }
+
+            // Update periods
+            const periods = getPeriods();
+            const periodSection = document.getElementById('period-settings-section');
+            const periodSelect = document.getElementById('period-select');
+
+            if (periods.length > 1) {
+                periodSection.style.display = 'block';
+                const currentPeriod = data.calculation.period || 'all';
+
+                periodSelect.innerHTML = '<option value="all">Toutes les périodes</option>' +
+                    periods.map(p => `<option value="${p.code}">${p.name}</option>`).join('');
+
+                periodSelect.value = currentPeriod;
+            } else {
+                periodSection.style.display = 'none';
+                data.calculation.period = 'all'; // Reset if no periods
+            }
         }
 
         function updateAboutDialog() {
             const officialAvg = calculateGeneralAverage(true, null, true);
+            const periods = getPeriods();
+            const latestPeriodCode = periods.length > 0 ? periods[periods.length - 1].code : 'all';
+
+            const isLatestPeriod = data.calculation.period === latestPeriodCode;
 
             const isOfficial = data.calculation.generalMode === 'subjects' &&
                                data.calculation.subjectMode === 'weighted' &&
                                !data.calculation.generalTruncated &&
-                               !data.calculation.subjectTruncated;
+                               !data.calculation.subjectTruncated &&
+                               data.calculation.countCompetencies === 'uniquement_si_vide' &&
+                               isLatestPeriod;
 
             const disclaimer = document.getElementById('official-disclaimer');
             const avgValEl = document.getElementById('official-avg-value');
@@ -1009,7 +1191,10 @@
                 max,
                 coef,
                 ghost: isGhost,
-                date: new Date().toISOString()
+                date: new Date().toISOString(),
+                title: "",
+                codePeriode: "",
+                elementsProgramme: []
             };
 
             subject.notes.push(newNote);
@@ -1615,7 +1800,10 @@
                         const allLocalNotes = await db.getAll('notes');
                         const localRealNotes = allLocalNotes.filter(n => !n.id.startsWith('simu-'));
 
-                        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+                        const edNotes = apiData.notes.filter(edNote =>
+                            (edNote.valeur || "").trim() !== "" ||
+                            (edNote.elementsProgramme && edNote.elementsProgramme.some(ep => ["1", "2", "3", "4"].includes(ep.valeur)))
+                        );
                         const notesToPut = [];
                         const seenLocalIds = new Set();
 
@@ -1641,6 +1829,10 @@
                                 data.subjects.push(subject);
                             }
 
+                            const elementsProgramme = (edNote.elementsProgramme || [])
+                                .filter(ep => ep.valeur && ["1", "2", "3", "4"].includes(ep.valeur))
+                                .map(ep => ep.valeur);
+
                             const newNoteData = {
                                 id: edId,
                                 subjectId: subject.id,
@@ -1649,7 +1841,9 @@
                                 coef: coef,
                                 ghost: false,
                                 date: edNote.date || new Date().toISOString(),
-                                title: edNote.devoir || ""
+                                title: edNote.devoir || "",
+                                codePeriode: edNote.codePeriode || "",
+                                elementsProgramme: elementsProgramme
                             };
 
                             const existing = localRealNotes.find(n => n.id === edId);
@@ -1657,12 +1851,14 @@
                                 notesToPut.push(newNoteData);
                             } else {
                                 seenLocalIds.add(edId);
-                                // Compare data (value, date, title)
+                                // Compare data (value, date, title, etc)
                                 if (existing.value !== newNoteData.value ||
                                     existing.date !== newNoteData.date ||
                                     existing.title !== newNoteData.title ||
                                     existing.max !== newNoteData.max ||
-                                    existing.coef !== newNoteData.coef) {
+                                    existing.coef !== newNoteData.coef ||
+                                    existing.codePeriode !== newNoteData.codePeriode ||
+                                    JSON.stringify(existing.elementsProgramme) !== JSON.stringify(newNoteData.elementsProgramme)) {
 
                                     // Preserve local properties like 'hidden' during update
                                     const mergedNote = {
@@ -1958,6 +2154,20 @@
             document.getElementById('general-truncated-toggle').addEventListener('click', () => {
                 const checkbox = document.getElementById('general-truncated-checkbox');
                 data.calculation.generalTruncated = checkbox.classList.toggle('checked');
+                saveData();
+                updateAll();
+                hapticFeedback();
+            });
+
+            document.getElementById('count-competencies-select').addEventListener('change', (e) => {
+                data.calculation.countCompetencies = e.target.value;
+                saveData();
+                updateAll();
+                hapticFeedback();
+            });
+
+            document.getElementById('period-select').addEventListener('change', (e) => {
+                data.calculation.period = e.target.value;
                 saveData();
                 updateAll();
                 hapticFeedback();

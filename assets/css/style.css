@@ -1578,3 +1578,21 @@ body.is-offline .offline-badge {
     background: #ffb4ab;
     color: #690005;
 }
+
+/* Competency Pills */
+.comp-pills-container {
+    display: flex;
+    gap: 4px;
+}
+
+.comp-pill {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.comp-red { background-color: #f44336; }
+.comp-yellow { background-color: #ffeb3b; }
+.comp-green { background-color: #4caf50; }
+.comp-blue { background-color: #2196f3; }
