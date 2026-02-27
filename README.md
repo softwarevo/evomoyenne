@@ -7,22 +7,17 @@
 > Une application web fluide pour calculer et suivre l'évolution de vos moyennes en un clin d'œil. 🚀
 
 ## ✨ Fonctionnalités
-- **Connexion EcoleDirecte** : Il suffit de vous connecter à votre compte EcoleDirecte pour utiliser evoMoyenne. _(Nous utilisons [evo2ED](https://github.com/softwarevo/evo2ed), notre bridge pour EcoleDirecte, qui lui-même repose sur [api-ecoledirecte](https://github.com/louislegrain/api-ecoledirecte), une bibliothèque par [Louis Legrain](https://github.com/louislegrain) sous licence ISC. C'est grâce à lui qu'evoMoyenne fonctionne ❤️)_
+- **Connexion EcoleDirecte** : Il suffit de vous connecter à votre compte EcoleDirecte pour utiliser evoMoyenne. _Pour cela, nous utilisons notre propre bridge ([evoDirecte Bridge](https://bridge.evodirecte.evosuite.qzz.io)) et notre propre wrapper ([evoDirecte](https://evodirecte.evosuite.qzz.io))._
 - **Calcul instantané** : Saisissez vos identifiants, l'application s'occupe du reste.
 - **Interface épurée** : Un design moderne et responsive pour une expérience utilisateur optimale.
 - **Infos détaillées** : Calcul précis, graphique d'évolution, objectif et moyennes de matières.
 - **Partage efficace** : Partagez votre moyenne en quelques secondes en 1 clic via une image ou un bulletin fictif.
 
-## 🗺️ Roadmap
-Voici les prochaines étapes du développement :
-- [ ] **UX update** : Onboardings, plusieurs pages, séries, db, thèmes...
-- [ ] **evoAI** : Appréciations, scores, coefs automatiques, prédictions de notes et plus, générés par un modèle d'IA spécial !
-
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
 
 ## ☁️ Version
-evoMoyenne est actuellement sous sa version 1.1.
+evoMoyenne est actuellement sous sa version Flower (1).
 
 ## ⚖️ Licence
 **evoMoyenne** est un projet open-source développé par **[evoSoftware](https://github.com/softwarevo)**.
