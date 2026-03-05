@@ -1,3 +1,7 @@
+> [!WARNING]
+> Cet été, nous **abandonnerons ce projet**. evoMoyenne aura un successeur : _evoDirecte_. Ce ne sera plus qu'une histoire de notes, mais un remplacement complet d'EcoleDirecte, très plaisant visuellement, et avec beaucoup de fonctionnalités qu'on ne trouve pas dans l'application officielle.
+> En attendant la sortie d'evoDirecte, **evoMoyenne sera toujours utilisable** jusqu'à décembre 2026, date à laquelle le domaine evomoyenne.qzz.io expire.
+> Nous ne ferons pas de mise à jour majeure après la v1.2. Que des fixes nécessaires.
 # 📈 evoMoyenne
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -13,11 +17,18 @@
 - **Infos détaillées** : Calcul précis, graphique d'évolution, objectif et moyennes de matières.
 - **Partage efficace** : Partagez votre moyenne en quelques secondes en 1 clic via une image ou un bulletin fictif.
 
+## 🐛 Bugs connus
+> [!WARNING]
+> Avec le développement d'evoDirecte, nous avons moins de temps pour nous occuper d'evoMoyenne. En conséquence, **ces bugs ne seront peut-êtres pas fixés**.
+- 🔎 **EN INVESTIGATION** Sur certains appareils, evoMoyenne s'affiche mais ne répond pas. Nous avons vaguement identifié l'erreur, **n'hésitez pas à nous partager des infos** en [créant une issue](https://github.com/softwarevo/evomoyenne/issues/new) ou par mail à [contact@evomoyenne.qzz.io](mailto:contact@evomoyenne.qzz.io) !
+- ⏱️ **EN ATTENTE** La synchronisation ne fonctionne pas. Nous avons tout ce qu'il nous faut pour régler cette erreur, ce sera réparé bientôt ! En attendant, **vous devrez vous déconnecter** puis vous reconnecter pour synchroniser evoMoyenne.
+- ❌ **PAS PRÉVU** Le site ne se charge pas en mode navigation privée sur certains navigateurs. Nous n'avons pas prévu de régler ce problème.
+
 ## 🌐 Site web
-evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**
+evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**.
 
 ## ☁️ Version
-evoMoyenne est actuellement sous sa version Flower (1).
+evoMoyenne est actuellement sous sa version 1.2 (version finale : nous ne développerons pas de nouvelles fonctionnalités).
 
 ## ⚖️ Licence
 **evoMoyenne** est un projet open-source développé par **[evoSoftware](https://github.com/softwarevo)**.
