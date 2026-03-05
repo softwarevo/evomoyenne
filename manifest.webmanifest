@@ -1,7 +1,8 @@
 {
   "name": "evoMoyenne",
   "short_name": "evoMoyenne",
-  "description": "Calculateur de moyenne avancé avec synchronisation EcoleDirecte.",
+  "description": "evoMoyenne : l'outil ultime pour calculer tes moyennes et simuler tes notes en temps réel. Synchronisation EcoleDirecte facile et sécurisée.",
+  "lang": "fr",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

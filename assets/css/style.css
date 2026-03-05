@@ -68,6 +68,12 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+:focus-visible {
+    outline: 2px solid var(--md-sys-color-contrast);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 html, body {
     height: 100%;
     overflow: hidden;
@@ -172,6 +178,9 @@ body {
     color: var(--md-sys-color-on-surface-variant);
     background: var(--md-sys-color-surface-container-highest);
     padding: 2px 6px;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
     border-radius: 6px;
     margin-left: 4px;
     align-self: flex-start;
@@ -570,15 +579,22 @@ body {
     height: 20px;
     background: var(--md-sys-color-surface-container-highest);
     border-radius: 4px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all var(--transition-fast);
+    pointer-events: none;
 }
 
 .checkbox-m3.checked {
     background: var(--md-sys-color-primary);
+}
+
+.ghost-toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 .checkbox-m3 .material-symbols-rounded {
@@ -652,11 +668,17 @@ body {
 
 .subject-header {
     display: flex;
+    width: 100%;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    color: inherit;
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
     cursor: pointer;
     transition: background var(--transition-fast);
+    text-align: left;
 }
 
 .subject-header:hover {
