@@ -11,7 +11,7 @@
 > Une application web fluide pour calculer et suivre l'évolution de vos moyennes en un clin d'œil. 🚀
 
 ## ✨ Fonctionnalités
-- **Connexion EcoleDirecte** : Il suffit de vous connecter à votre compte EcoleDirecte pour utiliser evoMoyenne. _Pour cela, nous utilisons notre propre bridge ([evoDirecte Bridge](https://bridge.evodirecte.evosuite.qzz.io)) et notre propre wrapper ([evoDirecte](https://evodirecte.evosuite.qzz.io))._
+- **Connexion EcoleDirecte** : Il suffit de vous connecter à votre compte EcoleDirecte pour utiliser evoMoyenne.
 - **Calcul instantané** : Saisissez vos identifiants, l'application s'occupe du reste.
 - **Interface épurée** : Un design moderne et responsive pour une expérience utilisateur optimale.
 - **Infos détaillées** : Calcul précis, graphique d'évolution, objectif et moyennes de matières.
