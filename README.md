@@ -1,6 +1,7 @@
 > [!WARNING]
-> Cet été, nous **abandonnerons ce projet**. evoMoyenne aura un successeur : _evoDirecte_. Ce ne sera plus qu'une histoire de notes, mais un remplacement complet d'EcoleDirecte (avec quelques hacks utiles en plus !).
-> En attendant la sortie d'evoDirecte, **evoMoyenne sera toujours utilisable** jusqu'à décembre 2026, date à laquelle note domaine expire.
+> Cet été, nous **abandonnerons ce projet**. evoMoyenne aura un successeur : _evoDirecte_. Ce ne sera plus qu'une histoire de notes, mais un remplacement complet d'EcoleDirecte, très plaisant visuellement, et avec beaucoup de fonctionnalités qu'on ne trouve pas dans l'application officielle.
+> En attendant la sortie d'evoDirecte, **evoMoyenne sera toujours utilisable** jusqu'à décembre 2026, date à laquelle le domaine evomoyenne.qzz.io expire.
+> Nous ne ferons pas de mise à jour majeure après la v1.2. Que des fixes nécessaires.
 # 📈 evoMoyenne
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -25,10 +26,9 @@
 
 ## 🌐 Site web
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**.
-Si vous souhaitez tester la version bêta d'evoMoyenne, rendez-vous sur [beta.evomoyenne.qzz.io](https://beta.evomoyenne.qzz.io) ! **CETTE VERSION PEUT ÊTRE INSTABLE**.
 
 ## ☁️ Version
-evoMoyenne est actuellement sous sa version 1.1 (version finale : nous ne développerons pas de nouvelles fonctionnalités).
+evoMoyenne est actuellement sous sa version 1.2 (version finale : nous ne développerons pas de nouvelles fonctionnalités).
 
 ## ⚖️ Licence
 **evoMoyenne** est un projet open-source développé par **[evoSoftware](https://github.com/softwarevo)**.
