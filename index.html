@@ -22,7 +22,7 @@
 	<meta name="keywords" content="EcoleDirecte, Moyenne EcoleDirecte, Moyenne Générale, Moyenne scolaire, Notes EcoleDirecte, evoMoyenne, evo moyenne">
     <link rel="apple-touch-icon" href="assets/logos/logo-touch.png">
     <title>evoMoyenne - Calculateur de moyennes intelligent compatible avec EcoleDirecte</title>
-    <meta name="description" content="L'outil ultime pour suivre tes notes et ta moyenne en temps réel. Fonctionnalités intelligentes. Compatible avec EcoleDirecte.">
+    <meta name="description" content="evoMoyenne : l'outil ultime pour calculer tes moyennes et simuler tes notes en temps réel. Synchronisation EcoleDirecte facile et sécurisée.">
     <link rel="canonical" href="https://evomoyenne.qzz.io/">
     <meta property="og:url" content="https://evomoyenne.qzz.io/">
     <meta property="og:type" content="website">
@@ -60,7 +60,8 @@
         "Suivi des moyennes",
 		"Partage de sa moyenne",
 		"Bulletin fictif"
-      ]
+      ],
+      "inLanguage": "fr"
     }
     </script>
 
@@ -82,9 +83,9 @@
         <header class="top-bar">
             <h1 class="visually-hidden">evoMoyenne - Calculateur de moyennes intelligent compatible avec EcoleDirecte</h1>
             <div class="logo-container">
-                <img id="logo-img" src="/assets/logos/logo-b.png" alt="evoMoyenne Logo" loading="eager" width="32" height="32">
+                <img id="logo-img" src="/assets/logos/logo-b.png" alt="Logo-evoMoyenne" loading="eager" width="32" height="32">
                 <span class="logo-text">evoMoyenne</span>
-				<span class="version-badge" id="version-badge" style="cursor: pointer;">v1.2</span>
+				<button class="version-badge" id="version-badge" aria-label="Voir les notes de version">v1.2</button>
             </div>
 			
             <div class="top-actions">
@@ -245,12 +246,12 @@
                         Mes matières
                     </h2>
                     <div style="display: flex; gap: 8px;">
-                        <button class="coef-btn" id="remove-ghosts-btn" style="display: none;">
-                            <span class="material-symbols-rounded">ink_eraser</span>
+                        <button class="coef-btn" id="remove-ghosts-btn" style="display: none;" aria-label="Retirer toutes les notes fantômes et simulations">
+                            <span class="material-symbols-rounded" aria-hidden="true">ink_eraser</span>
                             Retirer fantômes
                         </button>
-                        <button class="coef-btn" id="coef-dialog-btn">
-                            <span class="material-symbols-rounded">tune</span>
+                        <button class="coef-btn" id="coef-dialog-btn" aria-label="Modifier les coefficients des matières">
+                            <span class="material-symbols-rounded" aria-hidden="true">tune</span>
                             Coefficients
                         </button>
                     </div>
@@ -297,8 +298,8 @@
                     Au conseil de classe, seule la méthode officielle prend foi, même si elle est injuste.
                     Votre moyenne officielle : <strong id="official-avg-value">--</strong>
                 </div>
-				<p>Nous utilisons notre propre bridge , <a href=https://github.com/softwarevo/evo2ed>evo2ED</a>, basé sur la librairie <a href=https://github.com/louislegrain/api-ecoledirecte>api-ecoledirecte</a>, pour la connexion à EcoleDirecte.
-				<p><strong>TOUT le contenu d'evoMoyenne</strong> est eopen-source, du site lui même au bridge.
+				<p>Nous utilisons notre propre bridge , <a href="https://github.com/softwarevo/evo2ed" target="_blank" rel="noopener" title="Ouvrir le dépôt GitHub de evo2ED (nouvel onglet)">evo2ED</a>, basé sur la librairie <a href="https://github.com/louislegrain/api-ecoledirecte" target="_blank" rel="noopener" title="Ouvrir le dépôt GitHub de api-ecoledirecte (nouvel onglet)">api-ecoledirecte</a>, pour la connexion à EcoleDirecte.</p>
+				<p><strong>TOUT le contenu d'evoMoyenne</strong> est open-source, du site lui-même au bridge.</p>
                 <p style="margin-top: 16px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Version 1.1</p>
             </section>
             <footer class="dialog-actions">
@@ -311,12 +312,13 @@
         <div class="dialog">
             <h2 class="dialog-title" id="settings-dialog-title">Paramètres</h2>
             <section class="dialog-content">
-                <div class="ghost-toggle" id="dont-save-toggle" style="padding: 12px 0; cursor: pointer;" role="button" aria-pressed="false" aria-label="Ne pas enregistrer de données localement">
+                <label class="ghost-toggle" id="dont-save-toggle" style="padding: 12px 0; cursor: pointer;">
+                    <input type="checkbox" id="dont-save-input">
                     <div class="checkbox-m3" id="dont-save-checkbox">
                         <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                     </div>
                     <span class="ghost-toggle-label" style="cursor: pointer;">Ne pas enregistrer de données localement</span>
-                </div>
+                </label>
                 <p style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">
                     Si cette option est activée, aucune donnée ne sera sauvegardée dans votre navigateur. Tout sera perdu à la fermeture de l'onglet.
                 </p>
@@ -344,12 +346,13 @@
                             <span class="radio-desc">Note centrale (la moitié des notes est au-dessus)</span>
                         </div>
                     </label>
-                    <div class="ghost-toggle" id="general-truncated-toggle" style="padding: 8px 0; cursor: pointer;">
+                    <label class="ghost-toggle" id="general-truncated-toggle" style="padding: 8px 0; cursor: pointer;">
+                        <input type="checkbox" id="general-truncated-input">
                         <div class="checkbox-m3" id="general-truncated-checkbox">
                             <span class="material-symbols-rounded filled">check</span>
                         </div>
-                        <label class="ghost-toggle-label" style="cursor: pointer;">Tronquée (remplace la meilleure et la pire)</label>
-                    </div>
+                        <span class="ghost-toggle-label" style="cursor: pointer;">Tronquée (remplace la meilleure et la pire)</span>
+                    </label>
                 </div>
 
                 <div id="comp-settings-section">
@@ -387,15 +390,16 @@
                             <span class="radio-title">Médiane</span>
                         </div>
                     </label>
-                    <div class="ghost-toggle" id="subject-truncated-toggle" style="padding: 8px 0; cursor: pointer;">
+                    <label class="ghost-toggle" id="subject-truncated-toggle" style="padding: 8px 0; cursor: pointer;">
+                        <input type="checkbox" id="subject-truncated-input">
                         <div class="checkbox-m3" id="subject-truncated-checkbox">
                             <span class="material-symbols-rounded filled">check</span>
                         </div>
-                        <label class="ghost-toggle-label" style="cursor: pointer;">Tronquée (remplace la meilleure et la pire)</label>
-                    </div>
+                        <span class="ghost-toggle-label" style="cursor: pointer;">Tronquée (remplace la meilleure et la pire)</span>
+                    </label>
                 </div>
             </div>
-            <div class="dialog-actions">
+            <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-settings-dialog">Fermer</button>
             </footer>
         </div>
@@ -436,12 +440,13 @@
                     <label class="form-label" for="edit-note-coef">Coefficient</label>
                     <input type="number" class="form-input" id="edit-note-coef" min="0.1" max="20" step="0.1" aria-label="Modifier le coefficient">
                 </div>
-                <div class="ghost-toggle" style="padding: 0; display: none;" role="button" aria-pressed="false" aria-label="Note fantôme (simulation)">
-                    <div class="checkbox-m3" id="edit-ghost-checkbox">
+                <label class="ghost-toggle" style="padding: 0; display: none;" id="edit-ghost-toggle">
+                    <input type="checkbox" id="edit-ghost-input" checked disabled>
+                    <div class="checkbox-m3 checked" id="edit-ghost-checkbox">
                         <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                     </div>
                     <span class="ghost-toggle-label">Note fantôme (simulation)</span>
-                </div>
+                </label>
             </div>
             <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-secondary" id="close-edit-dialog">Annuler</button>
@@ -452,7 +457,7 @@
 
 	<div class="dialog-overlay" id="release-notes-dialog" role="dialog" aria-labelledby="release-notes-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title">Notes de version (v1.2)</h2>
+            <h2 class="dialog-title" id="release-notes-title">Notes de version (v1.2)</h2>
             <div class="dialog-content" style="max-height: 300px; overflow-y: auto; text-align: left;">
                 <p><strong>Nouveautés :</strong></p>
                 <ul style="padding-left: 20px; margin-top: 8px;">
@@ -460,7 +465,7 @@
 					<li>2️⃣ Plus de paramètres : modes de calcul, période, compter les compétences</li>
 					<li>3️⃣ Et plus</li>
                 </ul>
-				<p>Si vous trouvez un bug, n'hésitez pas à nous le signaler en personne, sur le <a href="https://github.evomoyenne.qzz.io">Github</a> ou sur <a href="mailto:contact@evomoyenne.qzz.io">contact@evomoyenne.qzz.io</a> !</p>
+				<p>Si vous trouvez un bug, n'hésitez pas à nous le signaler en personne, sur le <a href="https://github.evomoyenne.qzz.io" target="_blank" rel="noopener" title="Ouvrir le dépôt GitHub d'evoMoyenne (nouvel onglet)">Github</a> ou sur <a href="mailto:contact@evomoyenne.qzz.io" title="Envoyer un e-mail à contact@evomoyenne.qzz.io">contact@evomoyenne.qzz.io</a> !</p>
             </section>
             <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-release-notes">Génial !</button>

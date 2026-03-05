@@ -728,25 +728,25 @@
                 
                 return `
                     <section class="card subject-card" data-subject="${subject.id}">
-                        <header class="subject-header">
-                            <div class="subject-info" onclick="toggleSubject('${subject.id}')" role="button" aria-expanded="false" aria-label="Afficher les notes de ${subject.name}">
+                        <button class="subject-header" onclick="toggleSubject('${subject.id}')" aria-expanded="false" aria-controls="notes-${subject.id}" aria-label="Afficher les notes de ${subject.name}">
+                            <div class="subject-info">
                                 <div class="subject-name">
                                     ${subject.name}
                                     <span class="subject-coef">×${subject.coef}</span>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')">${avg !== null ? avg.toFixed(2) : '--'}${hasGhosts ? ' 👻' : ''}</div>
+                                <div class="subject-average-pill">${avg !== null ? avg.toFixed(2) : '--'}${hasGhosts ? ' 👻' : ''}</div>
                             </div>
-                        </header>
+                        </button>
                         <div class="notes-list" id="notes-${subject.id}" style="display: none;">
                             ${notes.length === 0 ?
                                 '<p style="text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 16px 0;">Aucune note</p>' :
                                 recentNotes.map(note => renderNote(subject.id, note)).join('')
                             }
                             ${hasMore ? `
-                                <button class="see-all-btn" onclick="showAllNotes('${subject.id}')">
-                                    <span class="material-symbols-rounded">expand_more</span>
+                                <button class="see-all-btn" onclick="showAllNotes('${subject.id}')" aria-label="Voir toutes les notes de ${subject.name}">
+                                    <span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
                                     Voir tout (${notes.length} notes)
                                 </button>
                             ` : ''}
@@ -817,7 +817,13 @@
 
         function toggleSubject(subjectId) {
             const notesList = document.getElementById(`notes-${subjectId}`);
-            notesList.style.display = notesList.style.display === 'none' ? 'block' : 'none';
+            const isVisible = notesList.style.display === 'block';
+            notesList.style.display = isVisible ? 'none' : 'block';
+
+            const btn = document.querySelector(`.subject-card[data-subject="${subjectId}"] .subject-header`);
+            if (btn) {
+                btn.setAttribute('aria-expanded', !isVisible);
+            }
             hapticFeedback();
         }
 
@@ -854,10 +860,13 @@
 
         function updateSettingsDialog() {
             const checkbox = document.getElementById('dont-save-checkbox');
+            const input = document.getElementById('dont-save-input');
             if (isDontSaveMode) {
                 checkbox.classList.add('checked');
+                if (input) input.checked = true;
             } else {
                 checkbox.classList.remove('checked');
+                if (input) input.checked = false;
             }
 
             // Update radio buttons
@@ -870,12 +879,24 @@
 
             // Update checkboxes
             const genTrunc = document.getElementById('general-truncated-checkbox');
-            if (data.calculation.generalTruncated) genTrunc.classList.add('checked');
-            else genTrunc.classList.remove('checked');
+            const genTruncInput = document.getElementById('general-truncated-input');
+            if (data.calculation.generalTruncated) {
+                genTrunc.classList.add('checked');
+                if (genTruncInput) genTruncInput.checked = true;
+            } else {
+                genTrunc.classList.remove('checked');
+                if (genTruncInput) genTruncInput.checked = false;
+            }
 
             const subTrunc = document.getElementById('subject-truncated-checkbox');
-            if (data.calculation.subjectTruncated) subTrunc.classList.add('checked');
-            else subTrunc.classList.remove('checked');
+            const subTruncInput = document.getElementById('subject-truncated-input');
+            if (data.calculation.subjectTruncated) {
+                subTrunc.classList.add('checked');
+                if (subTruncInput) subTruncInput.checked = true;
+            } else {
+                subTrunc.classList.remove('checked');
+                if (subTruncInput) subTruncInput.checked = false;
+            }
 
             // Update competencies
             const compSelect = document.getElementById('count-competencies-select');
@@ -934,6 +955,7 @@
             if (!profileBtn || !dropdown) return;
 
             if (isLoggedOut) {
+                profileBtn.setAttribute('aria-label', 'Se connecter');
                 showLoginTip();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
@@ -951,12 +973,13 @@
                         <div class="form-group">
                             <input type="password" class="form-input small-input" placeholder="Mot de passe" aria-label="Mot de passe EcoleDirecte">
                         </div>
-                        <div class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;" role="button" aria-pressed="true" aria-label="Souvenez-vous de moi">
+                        <label class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;">
+                            <input type="checkbox" id="remember-me-input" checked aria-label="Se souvenir de moi">
                             <div class="checkbox-m3 checked" id="remember-me-checkbox">
                                 <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                             </div>
                             <span class="ghost-toggle-label" style="font-size: 13px; cursor: pointer;">Souvenez-vous de moi</span>
-                        </div>
+                        </label>
                         <div id="remember-me-disclaimer" style="display: none; font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; margin-bottom: 4px; padding-left: 32px; line-height: 1.2;">
                             Vous pouvez désactiver cette option dans les paramètres
                         </div>
@@ -980,11 +1003,12 @@
                 const photo = userSession?.identity?.photo || data.auth?.identity?.photo;
                 const fullName = (prenom + ' ' + nom).trim();
 
-                let avatarContent = `<span class="material-symbols-rounded">person</span>`;
+                let avatarContent = `<span class="material-symbols-rounded" aria-hidden="true">person</span>`;
                 if (photo && photo.startsWith('data:image')) {
-                    avatarContent = `<img src="${photo}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    avatarContent = `<img src="${photo}" alt="Photo de profil de ${fullName}" style="width: 100%; height: 100%; object-fit: cover;">`;
                 }
 
+                profileBtn.setAttribute('aria-label', 'Menu profil');
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
                         ${avatarContent}
@@ -1031,9 +1055,8 @@
                 aboutBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     updateAboutDialog();
-                    document.getElementById('about-dialog').classList.add('visible');
+                    openDialog('about-dialog', document.getElementById('profile-trigger'));
                     document.getElementById('profile-dropdown').classList.remove('visible');
-                    hapticFeedback();
                 });
             }
 
@@ -1042,9 +1065,8 @@
                 settingsBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     updateSettingsDialog();
-                    document.getElementById('settings-dialog').classList.add('visible');
+                    openDialog('settings-dialog', document.getElementById('profile-trigger'));
                     document.getElementById('profile-dropdown').classList.remove('visible');
-                    hapticFeedback();
                 });
             }
     
@@ -1261,7 +1283,7 @@
             const ghostCheckbox = document.getElementById('edit-ghost-checkbox');
             if (ghostCheckbox) ghostCheckbox.classList.add('checked');
 
-            document.getElementById('edit-dialog').classList.add('visible');
+            openDialog('edit-dialog');
         }
 
         async function removeAllGhostNotes() {
@@ -1342,7 +1364,7 @@
             saveData();
             updateAll();
             
-            document.getElementById('edit-dialog').classList.remove('visible');
+            closeDialog('edit-dialog');
             editingNote = null;
             hapticFeedback();
             showSnackbar('Note modifiée');
@@ -1356,11 +1378,11 @@
                     <div class="dialog-coef-name">
                         <span>${s.name}</span>
                     </div>
-                    <input type="number" class="dialog-coef-input" data-subject="${s.id}" value="${s.coef}" min="0.1" max="20" step="0.1">
+                    <input type="number" class="dialog-coef-input" data-subject="${s.id}" value="${s.coef}" min="0.1" max="20" step="0.1" aria-label="Coefficient pour ${s.name}">
                 </div>
             `).join('');
             
-            document.getElementById('coef-dialog').classList.add('visible');
+            openDialog('coef-dialog');
         }
 
         function saveCoefs() {
@@ -1374,7 +1396,7 @@
             
             saveData();
             updateAll();
-            document.getElementById('coef-dialog').classList.remove('visible');
+            closeDialog('coef-dialog');
             hapticFeedback();
             showSnackbar('Coefficients sauvegardés');
         }
@@ -1386,7 +1408,7 @@
         function initShareDialog() {
             const picker = document.getElementById('emoji-picker');
             picker.innerHTML = emojis.map(e => `
-                <button class="emoji-btn ${e === selectedEmoji ? 'selected' : ''}" data-emoji="${e}">${e}</button>
+                <button class="emoji-btn ${e === selectedEmoji ? 'selected' : ''}" data-emoji="${e}" aria-label="Sélectionner l'emoji ${e}">${e}</button>
             `).join('');
             
             picker.addEventListener('click', (e) => {
@@ -1542,16 +1564,23 @@
                 page.classList.add('hidden');
             });
             
-            document.getElementById(`page-${pageName}`).classList.remove('hidden');
+            const newPage = document.getElementById(`page-${pageName}`);
+            newPage.classList.remove('hidden');
             
+            // Move focus to the new page for accessibility
+            newPage.setAttribute('tabindex', '-1');
+            newPage.focus();
+
             document.querySelectorAll('.nav-item').forEach(item => {
                 const icon = item.querySelector('.material-symbols-rounded');
                 if (item.dataset.page === pageName) {
                     item.classList.add('active');
                     icon.classList.add('filled');
+                    item.setAttribute('aria-current', 'page');
                 } else {
                     item.classList.remove('active');
                     icon.classList.remove('filled');
+                    item.removeAttribute('aria-current');
                 }
             });
             
@@ -1578,9 +1607,6 @@
             
             const logo = document.getElementById('logo-img');
             logo.src = theme === 'dark' ? '/assets/logos/logo-b.png' : '/assets/logos/logo-n.png';
-
-            const edLogo = document.getElementById('ed-logo');
-            if(edLogo) edLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
             
             if (evolutionChart) {
                 setTimeout(updateChart, 100);
@@ -1593,6 +1619,35 @@
             const newTheme = data.theme === 'dark' ? 'light' : 'dark';
             applyTheme(newTheme);
             hapticFeedback();
+        }
+
+        // ==================== DIALOG FOCUS MANAGEMENT ====================
+        let lastFocusedElement = null;
+
+        function openDialog(dialogId, returnElement = null) {
+            lastFocusedElement = returnElement || document.activeElement;
+            const dialog = document.getElementById(dialogId);
+            dialog.classList.add('visible');
+
+            // Focus the first focusable element or the title
+            setTimeout(() => {
+                const title = dialog.querySelector('.dialog-title');
+                if (title) {
+                    title.setAttribute('tabindex', '-1');
+                    title.focus();
+                } else {
+                    const firstInput = dialog.querySelector('input, button, select');
+                    if (firstInput) firstInput.focus();
+                }
+            }, 100);
+            hapticFeedback();
+        }
+
+        function closeDialog(dialogId) {
+            document.getElementById(dialogId).classList.remove('visible');
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            }
         }
 
         // ==================== UTILS ====================
@@ -1974,19 +2029,19 @@
             document.getElementById('coef-dialog-btn').addEventListener('click', openCoefDialog);
             
             document.getElementById('close-coef-dialog').addEventListener('click', () => {
-                document.getElementById('coef-dialog').classList.remove('visible');
+                closeDialog('coef-dialog');
             });
             
             document.getElementById('save-coef-dialog').addEventListener('click', saveCoefs);
             
             document.getElementById('coef-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'coef-dialog') {
-                    document.getElementById('coef-dialog').classList.remove('visible');
+                    closeDialog('coef-dialog');
                 }
             });
             
             document.getElementById('close-edit-dialog').addEventListener('click', () => {
-                document.getElementById('edit-dialog').classList.remove('visible');
+                closeDialog('edit-dialog');
                 editingNote = null;
             });
             
@@ -1994,7 +2049,7 @@
             
             document.getElementById('edit-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'edit-dialog') {
-                    document.getElementById('edit-dialog').classList.remove('visible');
+                    closeDialog('edit-dialog');
                     editingNote = null;
                 }
             });
@@ -2006,7 +2061,7 @@
                 }
                 document.getElementById('share-form').style.display = 'block';
                 document.getElementById('share-preview').style.display = 'none';
-                document.getElementById('share-dialog').classList.add('visible');
+                openDialog('share-dialog');
             });
 
             const profileTrigger = document.getElementById('profile-trigger');
@@ -2058,9 +2113,17 @@
                         const rememberToggle = e.target.closest('#remember-me-toggle');
                         if (rememberToggle) {
                             const checkbox = rememberToggle.querySelector('.checkbox-m3');
+                            const input = document.getElementById('remember-me-input');
                             const disclaimer = document.getElementById('remember-me-disclaimer');
-                            const isChecked = checkbox.classList.toggle('checked');
-                            if (disclaimer) disclaimer.style.display = isChecked ? 'none' : 'block';
+                            // If user clicked the label or wrapper, the input might have already changed
+                            // but our custom checkbox needs sync.
+                            // Using a short delay to ensure input.checked is updated by the browser
+                            setTimeout(() => {
+                                const isChecked = input.checked;
+                                if (isChecked) checkbox.classList.add('checked');
+                                else checkbox.classList.remove('checked');
+                                if (disclaimer) disclaimer.style.display = isChecked ? 'none' : 'block';
+                            }, 0);
                             hapticFeedback();
                         }
                         const challengeBtn = e.target.closest('.challenge-btn');
@@ -2084,14 +2147,14 @@
             }
             
             document.getElementById('close-share-dialog').addEventListener('click', () => {
-                document.getElementById('share-dialog').classList.remove('visible');
+                closeDialog('share-dialog');
             });
             
             document.getElementById('generate-share-card').addEventListener('click', generateShareCard);
             
             document.getElementById('share-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'share-dialog') {
-                    document.getElementById('share-dialog').classList.remove('visible');
+                    closeDialog('share-dialog');
                 }
             });
             
@@ -2104,32 +2167,39 @@
             });
 
             document.getElementById('close-about-dialog').addEventListener('click', () => {
-                document.getElementById('about-dialog').classList.remove('visible');
+                closeDialog('about-dialog');
             });
 
             document.getElementById('about-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'about-dialog') {
-                    document.getElementById('about-dialog').classList.remove('visible');
+                    closeDialog('about-dialog');
                 }
             });
 
             document.getElementById('close-settings-dialog').addEventListener('click', () => {
-                document.getElementById('settings-dialog').classList.remove('visible');
+                closeDialog('settings-dialog');
             });
 
             document.getElementById('settings-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'settings-dialog') {
-                    document.getElementById('settings-dialog').classList.remove('visible');
+                    closeDialog('settings-dialog');
                 }
             });
 
-            document.getElementById('dont-save-toggle').addEventListener('click', async () => {
+            document.getElementById('dont-save-toggle').addEventListener('click', async (e) => {
                 const checkbox = document.getElementById('dont-save-checkbox');
-                isDontSaveMode = checkbox.classList.toggle('checked');
-                if (isDontSaveMode) {
-                    await clearAllData();
-                    showSnackbar('Données locales supprimées');
-                }
+                const input = document.getElementById('dont-save-input');
+                // Use setTimeout to wait for input.checked to be updated
+                setTimeout(async () => {
+                    isDontSaveMode = input.checked;
+                    if (isDontSaveMode) {
+                        checkbox.classList.add('checked');
+                        await clearAllData();
+                        showSnackbar('Données locales supprimées');
+                    } else {
+                        checkbox.classList.remove('checked');
+                    }
+                }, 0);
                 hapticFeedback();
             });
 
@@ -2153,9 +2223,14 @@
 
             document.getElementById('general-truncated-toggle').addEventListener('click', () => {
                 const checkbox = document.getElementById('general-truncated-checkbox');
-                data.calculation.generalTruncated = checkbox.classList.toggle('checked');
-                saveData();
-                updateAll();
+                const input = document.getElementById('general-truncated-input');
+                setTimeout(() => {
+                    data.calculation.generalTruncated = input.checked;
+                    if (data.calculation.generalTruncated) checkbox.classList.add('checked');
+                    else checkbox.classList.remove('checked');
+                    saveData();
+                    updateAll();
+                }, 0);
                 hapticFeedback();
             });
 
@@ -2175,9 +2250,14 @@
 
             document.getElementById('subject-truncated-toggle').addEventListener('click', () => {
                 const checkbox = document.getElementById('subject-truncated-checkbox');
-                data.calculation.subjectTruncated = checkbox.classList.toggle('checked');
-                saveData();
-                updateAll();
+                const input = document.getElementById('subject-truncated-input');
+                setTimeout(() => {
+                    data.calculation.subjectTruncated = input.checked;
+                    if (data.calculation.subjectTruncated) checkbox.classList.add('checked');
+                    else checkbox.classList.remove('checked');
+                    saveData();
+                    updateAll();
+                }, 0);
                 hapticFeedback();
             });
                 
@@ -2200,21 +2280,20 @@
 
             if (versionBadge && releaseDialog) {
                 versionBadge.addEventListener('click', () => {
-                    releaseDialog.classList.add('visible');
-                    hapticFeedback();
+                    openDialog('release-notes-dialog');
                 });
             }
 
             if (releaseDialog) {
                 if (closeRelease) {
                     closeRelease.addEventListener('click', () => {
-                        releaseDialog.classList.remove('visible');
+                        closeDialog('release-notes-dialog');
                     });
                 }
 
                 releaseDialog.addEventListener('click', (e) => {
                     if (e.target === releaseDialog) {
-                        releaseDialog.classList.remove('visible');
+                        closeDialog('release-notes-dialog');
                     }
                 });
             }
