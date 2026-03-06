@@ -28,7 +28,7 @@
 evoMoyenne est disponible sur **[evomoyenne.qzz.io](https://evomoyenne.qzz.io)**.
 
 ## ☁️ Version
-evoMoyenne est actuellement sous sa version 1.2 (version finale : nous ne développerons pas de nouvelles fonctionnalités).
+evoMoyenne est actuellement sous sa version 1.2.1 (version finale : nous ne développerons pas de nouvelles fonctionnalités).
 
 ## ⚖️ Licence
 **evoMoyenne** est un projet open-source développé par **[evoSoftware](https://github.com/softwarevo)**.

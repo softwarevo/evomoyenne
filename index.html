@@ -240,7 +240,7 @@
                     </button>
                 </section>
 
-                <header class="subjects-header">
+                <div class="subjects-header">
                     <h2 class="section-title" style="margin-bottom: 0;">
                         <span class="material-symbols-rounded" aria-hidden="true">folder</span>
                         Mes matières
@@ -300,7 +300,7 @@
                 </div>
 				<p>Nous utilisons notre propre bridge , <a href="https://github.com/softwarevo/evo2ed" target="_blank" rel="noopener" title="Ouvrir le dépôt GitHub de evo2ED (nouvel onglet)">evo2ED</a>, basé sur la librairie <a href="https://github.com/louislegrain/api-ecoledirecte" target="_blank" rel="noopener" title="Ouvrir le dépôt GitHub de api-ecoledirecte (nouvel onglet)">api-ecoledirecte</a>, pour la connexion à EcoleDirecte.</p>
 				<p><strong>TOUT le contenu d'evoMoyenne</strong> est open-source, du site lui-même au bridge.</p>
-                <p style="margin-top: 16px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Version 1.1</p>
+                <p style="margin-top: 16px; font-size: 13px; color: var(--md-sys-color-on-surface-variant);">Version 1.2.1</p>
             </section>
             <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-about-dialog">Fermer</button>
@@ -398,7 +398,7 @@
                         <span class="ghost-toggle-label" style="cursor: pointer;">Tronquée (remplace la meilleure et la pire)</span>
                     </label>
                 </div>
-            </div>
+            </section>
             <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-settings-dialog">Fermer</button>
             </footer>
@@ -457,16 +457,14 @@
 
 	<div class="dialog-overlay" id="release-notes-dialog" role="dialog" aria-labelledby="release-notes-title" aria-modal="true">
         <div class="dialog">
-            <h2 class="dialog-title" id="release-notes-title">Notes de version (v1.2)</h2>
+            <h2 class="dialog-title" id="release-notes-title">Notes de version (v1.2.1)</h2>
             <div class="dialog-content" style="max-height: 300px; overflow-y: auto; text-align: left;">
-                <p><strong>Nouveautés :</strong></p>
+                <p><strong>Bugs réparés :</strong></p>
                 <ul style="padding-left: 20px; margin-top: 8px;">
-                    <li>1️⃣ Plus d'infos sur vos notes : compétences, titre...</li>
-					<li>2️⃣ Plus de paramètres : modes de calcul, période, compter les compétences</li>
-					<li>3️⃣ Et plus</li>
+                    <li>La barre de navigation ne s'affichait pas</li>
                 </ul>
 				<p>Si vous trouvez un bug, n'hésitez pas à nous le signaler en personne, sur le <a href="https://github.evomoyenne.qzz.io" target="_blank" rel="noopener" title="Ouvrir le dépôt GitHub d'evoMoyenne (nouvel onglet)">Github</a> ou sur <a href="mailto:contact@evomoyenne.qzz.io" title="Envoyer un e-mail à contact@evomoyenne.qzz.io">contact@evomoyenne.qzz.io</a> !</p>
-            </section>
+            </div>
             <footer class="dialog-actions">
                 <button class="dialog-btn dialog-btn-primary" id="close-release-notes">Génial !</button>
             </footer>

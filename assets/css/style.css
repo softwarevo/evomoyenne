@@ -979,9 +979,15 @@ body {
     width: 100%;
     max-width: 400px;
     max-height: 80vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     transform: scale(0.9);
     transition: transform var(--transition-medium);
+}
+
+.dialog-content {
+    overflow-y: auto;
+    flex: 1;
 }
 
 .dialog-overlay.visible .dialog {

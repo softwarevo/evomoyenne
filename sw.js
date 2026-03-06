@@ -1,6 +1,6 @@
 importScripts('./assets/js/idb.js');
 
-const CACHE_NAME = 'evomoyenne-v1.2-refesh1';
+const CACHE_NAME = 'evomoyenne-v1.2.1-refresh0';
 const ASSETS = [
     './',
     './index.html',
