@@ -1785,9 +1785,8 @@
             }
 
             try {
-                const response = await fetch('https://ed.api.evosuite.qzz.io/', {
+                const response = await fetch('https://ed.api.evosuite.qzz.io', {
                     method: 'POST',
-					mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
@@ -2113,9 +2112,10 @@
         
                     profileDropdown.addEventListener('click', async (e) => {
                         if (e.target.id === 'login-submit-btn') {
-                            const inputs = profileDropdown.querySelectorAll('input');
-                            const id = inputs[0].value.trim();
-                            const pass = inputs[1].value.trim();
+                            const idInput = profileDropdown.querySelector('input[placeholder="Identifiant"]');
+                            const passInput = profileDropdown.querySelector('input[placeholder="Mot de passe"]');
+                            const id = idInput?.value.trim();
+                            const pass = passInput?.value.trim();
 
                             if (!id || !pass) {
                                 showSnackbar('Il manque un truc là... 👀');

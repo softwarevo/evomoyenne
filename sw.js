@@ -32,7 +32,11 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-	if (e.request.method !== 'GET') return;
+	const url = new URL(e.request.url);
+	const isSameOrigin = url.origin === self.location.origin;
+
+	if (e.request.method !== 'GET' || !isSameOrigin) return;
+
 	e.respondWith(
 		caches.match(e.request).then(r => r || fetch(e.request))
 	);
@@ -83,7 +87,7 @@ async function backgroundCheck() {
 			}
 		};
 
-		const response = await fetch('https://ed.api.evosuite.qzz.io/', {
+		const response = await fetch('https://ed.api.evosuite.qzz.io', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(payload)
