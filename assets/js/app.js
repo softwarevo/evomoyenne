@@ -34,7 +34,8 @@
                 accountId: null,
                 identifiant: null,
                 motdepasse: null,
-                identity: { prenom: null, nom: null }
+                identity: { prenom: null, nom: null },
+                qcmAnswers: {}
             }
         };
 
@@ -80,6 +81,9 @@
                 const authProfile = await db.get('auth', 'profile');
                 if (authProfile) {
                     data.auth = { ...data.auth, ...authProfile };
+                }
+                if (!data.auth.qcmAnswers) {
+                    data.auth.qcmAnswers = {};
                 }
                 if (!data.auth.identity) {
                     data.auth.identity = { prenom: null, nom: null };
@@ -964,14 +968,17 @@
                     <span class="profile-name">Se connecter</span>
                 `;
 
+                const savedId = data.auth?.identifiant || "";
+                const savedPass = data.auth?.motdepasse || "";
+
                 dropdown.innerHTML = `
                     <div class="login-container">
                         <h2 class="dropdown-title">Connexion</h2>
                         <div class="form-group">
-                            <input type="text" class="form-input small-input" placeholder="Identifiant" aria-label="Identifiant EcoleDirecte">
+                            <input type="text" class="form-input small-input" placeholder="Identifiant" aria-label="Identifiant EcoleDirecte" value="${savedId}">
                         </div>
                         <div class="form-group">
-                            <input type="password" class="form-input small-input" placeholder="Mot de passe" aria-label="Mot de passe EcoleDirecte">
+                            <input type="password" class="form-input small-input" placeholder="Mot de passe" aria-label="Mot de passe EcoleDirecte" value="${savedPass}">
                         </div>
                         <label class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;">
                             <input type="checkbox" id="remember-me-input" checked aria-label="Se souvenir de moi">
@@ -1082,7 +1089,8 @@
                         accountId: null,
                         identifiant: null,
                         motdepasse: null,
-                        identity: { prenom: null, nom: null }
+                        identity: { prenom: null, nom: null },
+                        qcmAnswers: {}
                     };
                     await saveData();
                     updateProfileUI();
@@ -1728,8 +1736,8 @@
         // ==================== ECOLEDIRECTE BRIDGE ====================
         async function checkAutoLogin() {
             if (data.auth && (data.auth.token || (data.auth.identifiant && data.auth.motdepasse))) {
-                isLoggedOut = false;
-                updateProfileUI();
+                // Logout on refresh: We keep isLoggedOut = true
+                // and we trigger handleEDLogin in "silent" mode to try and reconnect
                 handleEDLogin(data.auth.identifiant, data.auth.motdepasse, null, true);
             }
         }
@@ -1795,6 +1803,7 @@
                     tempAuth = {
                         identifiant,
                         motdepasse,
+                        question: apiData.qcm.question,
                         tokens: {
                             token: apiData.token,
                             '2faToken': apiData['2faToken'],
@@ -1802,6 +1811,13 @@
                             accountId: apiData.accountId
                         }
                     };
+
+                    const rememberedAnswer = data.auth.qcmAnswers?.[apiData.qcm.question];
+                    if (rememberedAnswer && apiData.qcm.rawPropositions.includes(rememberedAnswer) && !handleEDLogin.lastAutoAnsweredQuestion) {
+                        handleEDLogin.lastAutoAnsweredQuestion = apiData.qcm.question;
+                        await handleEDLogin(identifiant, motdepasse, rememberedAnswer, isSilent);
+                        return;
+                    }
 
                     if (container) {
                         const buttonsHtml = apiData.qcm.propositions.map((prop, index) => `
@@ -1827,6 +1843,11 @@
                 if (apiData.status === 'SUCCESS') {
                     userSession = apiData;
                     isLoggedOut = false;
+
+                    if (qcmResponse && tempAuth.question) {
+                        data.auth.qcmAnswers[tempAuth.question] = qcmResponse;
+                    }
+                    handleEDLogin.lastAutoAnsweredQuestion = null;
                     tempAuth = {};
 
                     // Update persistent auth data
@@ -1968,6 +1989,7 @@
 
             } catch (err) {
                 console.error(err);
+                handleEDLogin.lastAutoAnsweredQuestion = null;
                 if (isSilent) {
                     if (navigator.onLine) {
                         showSnackbar('Session expirée, reconnecte-toi 👀');
