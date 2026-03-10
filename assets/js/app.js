@@ -19,6 +19,14 @@
             history: {},
             target: 20,
             theme: 'dark',
+            calculation: {
+                generalMode: 'weighted',
+                generalTruncated: false,
+                subjectMode: 'weighted',
+                subjectTruncated: false,
+                countCompetencies: 'uniquement_si_vide',
+                period: 'all'
+            },
             auth: {
                 token: null,
                 '2faToken': null,
@@ -26,7 +34,8 @@
                 accountId: null,
                 identifiant: null,
                 motdepasse: null,
-                identity: { prenom: null, nom: null }
+                identity: { prenom: null, nom: null },
+                qcmAnswers: {}
             }
         };
 
@@ -61,6 +70,9 @@
                     data.target = settings.target ?? 20;
                     data.theme = settings.theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                     data.history = settings.history ?? {};
+                    if (settings.calculation) {
+                        data.calculation = { ...data.calculation, ...settings.calculation };
+                    }
                 } else {
                     data.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
@@ -69,6 +81,9 @@
                 const authProfile = await db.get('auth', 'profile');
                 if (authProfile) {
                     data.auth = { ...data.auth, ...authProfile };
+                }
+                if (!data.auth.qcmAnswers) {
+                    data.auth.qcmAnswers = {};
                 }
                 if (!data.auth.identity) {
                     data.auth.identity = { prenom: null, nom: null };
@@ -150,7 +165,8 @@
                 await tx.objectStore('settings').put({
                     target: data.target,
                     theme: data.theme,
-                    history: data.history
+                    history: data.history,
+                    calculation: data.calculation
                 }, 'app');
 
                 await tx.done;
@@ -226,75 +242,258 @@
         let tempAuth = {};
 
         // ==================== CALCULATIONS ====================
-        function calculateSubjectAverage(subject, includeGhost = true) {
-            let notes = subject.notes.filter(n => !n.hidden);
-            if (!includeGhost) notes = notes.filter(n => !n.ghost);
+        function calculateWeightedMedian(items) {
+            if (items.length === 0) return null;
+            // Ensure all values and weights are numbers
+            const cleanItems = items.map(item => ({
+                value: Number(item.value),
+                weight: Math.max(0, Number(item.weight) || 0)
+            })).filter(item => !isNaN(item.value));
 
-            if (notes.length === 0) return null;
-            
-            let totalWeighted = 0;
-            let totalCoef = 0;
-            
-            notes.forEach(note => {
-                if (typeof note.value !== 'number') return;
-                const normalized = (note.value / note.max) * 20;
-                totalWeighted += normalized * note.coef;
-                totalCoef += note.coef;
-            });
-            
-            return totalCoef > 0 ? totalWeighted / totalCoef : null;
+            if (cleanItems.length === 0) return null;
+
+            cleanItems.sort((a, b) => a.value - b.value);
+            const totalWeight = cleanItems.reduce((sum, item) => sum + item.weight, 0);
+            if (totalWeight <= 0) return cleanItems[Math.floor(cleanItems.length / 2)].value;
+
+            const threshold = totalWeight / 2;
+
+            let cumulativeWeight = 0;
+            for (let i = 0; i < cleanItems.length; i++) {
+                cumulativeWeight += cleanItems[i].weight;
+                if (cumulativeWeight > threshold) {
+                    return cleanItems[i].value;
+                }
+                if (Math.abs(cumulativeWeight - threshold) < 1e-9) {
+                    if (i + 1 < cleanItems.length) {
+                        return (cleanItems[i].value + cleanItems[i + 1].value) / 2;
+                    } else {
+                        return cleanItems[i].value;
+                    }
+                }
+            }
+            return cleanItems[cleanItems.length - 1].value;
         }
 
-        function calculateGeneralAverage(includeGhost = true, atDate = null) {
-            let totalWeightedPoints = 0;
-            let totalWeightedCoefs = 0;
-            const atDateTime = atDate ? new Date(atDate).getTime() : null;
+        function calculateSubjectAverage(subject, includeGhost = true, atDate = null, overrideSettings = null) {
+            const calcSettings = overrideSettings || data.calculation;
+            let notes = (subject.notes || []).filter(n => !n.hidden);
+            if (!includeGhost) notes = notes.filter(n => !n.ghost);
 
-            data.subjects.forEach(subject => {
-                if (subject.notes && subject.notes.length > 0) {
-                    subject.notes.forEach(note => {
-                        if (note.hidden) return;
-                        if (!includeGhost && note.ghost) return;
-                        if (atDateTime && note.date) {
-                            const noteDate = new Date(note.date.split('T')[0]).getTime();
-                            if (noteDate > atDateTime) return;
-                        }
-                        if (typeof note.value !== 'number') return;
+            if (atDate) {
+                const atDateTime = new Date(atDate).getTime();
+                notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
+            }
 
-                        const noteSur20 = (note.value / note.max) * 20;
-                        const doubleCoef = note.coef * subject.coef;
-                
-                        totalWeightedPoints += noteSur20 * doubleCoef;
-                        totalWeightedCoefs += doubleCoef;
+            if (calcSettings.period && calcSettings.period !== 'all') {
+                notes = notes.filter(n => n.codePeriode === calcSettings.period);
+            }
+
+            let effectiveItems = [];
+            notes.forEach(n => {
+                const isNumeric = typeof n.value === 'number';
+                const comps = n.elementsProgramme || [];
+
+                if (isNumeric) {
+                    effectiveItems.push({
+                        valueOn20: (n.value / n.max) * 20,
+                        coef: Number(n.coef)
+                    });
+                    if (calcSettings.countCompetencies === 'toujours') {
+                        comps.forEach(c => {
+                            effectiveItems.push({
+                                valueOn20: Number(c) * 5,
+                                coef: Number(n.coef)
+                            });
+                        });
+                    }
+                } else if (comps.length > 0 && calcSettings.countCompetencies !== 'jamais') {
+                    comps.forEach(c => {
+                        effectiveItems.push({
+                            valueOn20: Number(c) * 5,
+                            coef: Number(n.coef)
+                        });
                     });
                 }
             });
 
-            return totalWeightedCoefs > 0 ? totalWeightedPoints / totalWeightedCoefs : null;
+            if (effectiveItems.length === 0) return null;
+
+            if (calcSettings.subjectMode === 'median') {
+                const items = effectiveItems.map(item => ({
+                    value: item.valueOn20,
+                    weight: item.coef
+                }));
+                return calculateWeightedMedian(items);
+            } else {
+                // weighted
+                let items = [...effectiveItems];
+                if (calcSettings.subjectTruncated && items.length >= 2) {
+                    items.sort((a, b) => a.valueOn20 - b.valueOn20);
+                    const secondMin = { ...items[1] };
+                    const secondMax = { ...items[items.length - 2] };
+                    items[0] = secondMin;
+                    items[items.length - 1] = secondMax;
+                }
+
+                let totalWeighted = 0;
+                let totalCoef = 0;
+                items.forEach(item => {
+                    totalWeighted += item.valueOn20 * item.coef;
+                    totalCoef += item.coef;
+                });
+                return totalCoef > 0 ? totalWeighted / totalCoef : null;
+            }
         }
 
-        function calculateGeneralAverage(includeGhost = true, atDate = null) {
-            const atDateTime = atDate ? new Date(atDate).getTime() : null;
+        function calculateGeneralAverage(includeGhost = true, atDate = null, forceOfficial = false) {
+            let calcSettings = data.calculation;
+            let subjCalcSettings = data.calculation;
 
-            const { totalPoints, totalCoefs } = data.subjects.reduce((acc, subject) => {
-                const subjectNotes = subject.notes || [];
-        
-                subjectNotes.forEach(note => {
-                    if (note.hidden || (!includeGhost && note.ghost)) return;
-                    if (atDateTime && note.date && new Date(note.date.split('T')[0]).getTime() > atDateTime) return;
-                    if (typeof note.value !== 'number') return;
+            if (forceOfficial) {
+                calcSettings = { generalMode: 'subjects', generalTruncated: false, countCompetencies: 'uniquement_si_vide', period: 'all' };
+                subjCalcSettings = { subjectMode: 'weighted', subjectTruncated: false, countCompetencies: 'uniquement_si_vide', period: 'all' };
 
-                    const noteSur20 = (note.value / note.max) * 20;
-                    const weight = note.coef * subject.coef;
+                const periods = getPeriods();
+                if (periods.length > 0) {
+                    const latest = periods[periods.length - 1];
+                    calcSettings.period = latest.code;
+                    subjCalcSettings.period = latest.code;
+                }
+            }
 
-                    acc.totalPoints += noteSur20 * weight;
-                    acc.totalCoefs += weight;
+            if (calcSettings.generalMode === 'weighted') {
+                let allItems = [];
+                data.subjects.forEach(subject => {
+                    let notes = (subject.notes || []).filter(n => !n.hidden);
+                    if (!includeGhost) notes = notes.filter(n => !n.ghost);
+                    if (atDate) {
+                        const atDateTime = new Date(atDate).getTime();
+                        notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
+                    }
+                    if (calcSettings.period && calcSettings.period !== 'all') {
+                        notes = notes.filter(n => n.codePeriode === calcSettings.period);
+                    }
+
+                    notes.forEach(n => {
+                        const isNumeric = typeof n.value === 'number';
+                        const comps = n.elementsProgramme || [];
+                        const baseCoef = Number(n.coef) * Number(subject.coef || 1);
+
+                        if (isNumeric) {
+                            allItems.push({
+                                valueOn20: (n.value / n.max) * 20,
+                                coef: baseCoef
+                            });
+                            if (calcSettings.countCompetencies === 'toujours') {
+                                comps.forEach(c => {
+                                    allItems.push({
+                                        valueOn20: Number(c) * 5,
+                                        coef: baseCoef
+                                    });
+                                });
+                            }
+                        } else if (comps.length > 0 && calcSettings.countCompetencies !== 'jamais') {
+                            comps.forEach(c => {
+                                allItems.push({
+                                    valueOn20: Number(c) * 5,
+                                    coef: baseCoef
+                                });
+                            });
+                        }
+                    });
                 });
 
-                return acc;
-            }, { totalPoints: 0, totalCoefs: 0 });
+                if (allItems.length === 0) return null;
 
-            return totalCoefs > 0 ? totalPoints / totalCoefs : null;
+                if (calcSettings.generalTruncated && allItems.length >= 2) {
+                    allItems.sort((a, b) => a.valueOn20 - b.valueOn20);
+                    const secondMin = { ...allItems[1] };
+                    const secondMax = { ...allItems[allItems.length - 2] };
+                    allItems[0] = secondMin;
+                    allItems[allItems.length - 1] = secondMax;
+                }
+
+                let totalPoints = 0;
+                let totalCoefs = 0;
+                allItems.forEach(n => {
+                    totalPoints += n.valueOn20 * n.coef;
+                    totalCoefs += n.coef;
+                });
+                return totalCoefs > 0 ? totalPoints / totalCoefs : null;
+
+            } else if (calcSettings.generalMode === 'subjects') {
+                let subjectAverages = data.subjects.map(s => {
+                    return {
+                        avg: calculateSubjectAverage(s, includeGhost, atDate, subjCalcSettings),
+                        coef: s.coef
+                    };
+                }).filter(s => s.avg !== null);
+
+                if (subjectAverages.length === 0) return null;
+
+                if (calcSettings.generalTruncated && subjectAverages.length >= 2) {
+                    subjectAverages.sort((a, b) => a.avg - b.avg);
+                    const secondMin = { ...subjectAverages[1] };
+                    const secondMax = { ...subjectAverages[subjectAverages.length - 2] };
+                    subjectAverages[0] = secondMin;
+                    subjectAverages[subjectAverages.length - 1] = secondMax;
+                }
+
+                let totalPoints = 0;
+                let totalCoefs = 0;
+                subjectAverages.forEach(s => {
+                    totalPoints += s.avg * s.coef;
+                    totalCoefs += s.coef;
+                });
+                return totalCoefs > 0 ? totalPoints / totalCoefs : null;
+
+            } else if (calcSettings.generalMode === 'median') {
+                let allItems = [];
+                data.subjects.forEach(subject => {
+                    let notes = (subject.notes || []).filter(n => !n.hidden);
+                    if (!includeGhost) notes = notes.filter(n => !n.ghost);
+                    if (atDate) {
+                        const atDateTime = new Date(atDate).getTime();
+                        notes = notes.filter(n => n.date && new Date(n.date.split('T')[0]).getTime() <= atDateTime);
+                    }
+                    if (calcSettings.period && calcSettings.period !== 'all') {
+                        notes = notes.filter(n => n.codePeriode === calcSettings.period);
+                    }
+
+                    notes.forEach(n => {
+                        const isNumeric = typeof n.value === 'number';
+                        const comps = n.elementsProgramme || [];
+                        const baseCoef = Number(n.coef) * Number(subject.coef || 1);
+
+                        if (isNumeric) {
+                            allItems.push({
+                                value: (n.value / n.max) * 20,
+                                weight: baseCoef
+                            });
+                            if (calcSettings.countCompetencies === 'toujours') {
+                                comps.forEach(c => {
+                                    allItems.push({
+                                        value: Number(c) * 5,
+                                        weight: baseCoef
+                                    });
+                                });
+                            }
+                        } else if (comps.length > 0 && calcSettings.countCompetencies !== 'jamais') {
+                            comps.forEach(c => {
+                                allItems.push({
+                                    value: Number(c) * 5,
+                                    weight: baseCoef
+                                });
+                            });
+                        }
+                    });
+                });
+
+                if (allItems.length === 0) return null;
+                return calculateWeightedMedian(allItems);
+            }
+            return null;
         }
 
         function getTopFlop() {
@@ -319,11 +518,15 @@
             if (!hasRealNotes) return;
 
             const allDates = new Set();
+            const currentPeriod = data.calculation.period;
+
             data.subjects.forEach(subject => {
                 subject.notes.forEach(note => {
                     if (!note.ghost && note.date) {
-                        const d = note.date.split('T')[0];
-                        allDates.add(d);
+                        if (currentPeriod === 'all' || note.codePeriode === currentPeriod) {
+                            const d = note.date.split('T')[0];
+                            allDates.add(d);
+                        }
                     }
                 });
             });
@@ -339,6 +542,39 @@
                 }
             });
             saveData();
+        }
+
+        function hasGhostNotes() {
+            return data.subjects.some(s => s.notes.some(n => n.ghost || n.hidden));
+        }
+
+        function getPeriods() {
+            const periodLatestDates = {};
+            data.subjects.forEach(subject => {
+                subject.notes.forEach(note => {
+                    const code = note.codePeriode;
+                    if (code) {
+                        const noteDate = new Date(note.date).getTime();
+                        if (!periodLatestDates[code] || noteDate > periodLatestDates[code]) {
+                            periodLatestDates[code] = noteDate;
+                        }
+                    }
+                });
+            });
+
+            const codes = Object.keys(periodLatestDates);
+            if (codes.length === 0) return [];
+
+            // Sort codes by their latest note date
+            codes.sort((a, b) => periodLatestDates[a] - periodLatestDates[b]);
+
+            const periods = codes.map((code, index) => ({
+                code: code,
+                name: `Période ${index + 1}`,
+                isLatest: index === codes.length - 1
+            }));
+
+            return periods;
         }
 
         function getEvolution() {
@@ -378,6 +614,10 @@
                 const oldAvg = parseFloat(avgEl.textContent) || 0;
                 avgEl.textContent = avg.toFixed(2);
                 
+                if (hasGhostNotes()) {
+                    avgEl.textContent += ' 👻';
+                }
+
                 if (oldAvg > 0 && avg > oldAvg && !suppressConfetti) {
                     triggerConfetti();
                 }
@@ -476,34 +716,42 @@
                 `;
                 return;
             }
+
+            const currentPeriod = data.calculation.period;
             
             container.innerHTML = data.subjects.map(subject => {
+                let notes = subject.notes;
+                if (currentPeriod && currentPeriod !== 'all') {
+                    notes = subject.notes.filter(n => n.codePeriode === currentPeriod);
+                }
+
                 const avg = calculateSubjectAverage(subject);
-                const recentNotes = subject.notes.slice(-3).reverse();
-                const hasMore = subject.notes.length > 3;
+                const hasGhosts = notes.some(n => n.ghost || n.hidden);
+                const recentNotes = notes.slice(-3).reverse();
+                const hasMore = notes.length > 3;
                 
                 return `
                     <section class="card subject-card" data-subject="${subject.id}">
-                        <header class="subject-header">
-                            <div class="subject-info" onclick="toggleSubject('${subject.id}')" role="button" aria-expanded="false" aria-label="Afficher les notes de ${subject.name}">
+                        <button class="subject-header" onclick="toggleSubject('${subject.id}')" aria-expanded="false" aria-controls="notes-${subject.id}" aria-label="Afficher les notes de ${subject.name}">
+                            <div class="subject-info">
                                 <div class="subject-name">
                                     ${subject.name}
                                     <span class="subject-coef">×${subject.coef}</span>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="subject-average-pill" onclick="toggleSubject('${subject.id}')" role="button" aria-label="Moyenne de ${subject.name}: ${avg !== null ? avg.toFixed(2) : 'N/A'}">${avg !== null ? avg.toFixed(2) : '--'}</div>
+                                <div class="subject-average-pill">${avg !== null ? avg.toFixed(2) : '--'}${hasGhosts ? ' 👻' : ''}</div>
                             </div>
-                        </header>
+                        </button>
                         <div class="notes-list" id="notes-${subject.id}" style="display: none;">
-                            ${subject.notes.length === 0 ? 
+                            ${notes.length === 0 ?
                                 '<p style="text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 16px 0;">Aucune note</p>' :
                                 recentNotes.map(note => renderNote(subject.id, note)).join('')
                             }
                             ${hasMore ? `
                                 <button class="see-all-btn" onclick="showAllNotes('${subject.id}')" aria-label="Voir toutes les notes de ${subject.name}">
                                     <span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
-                                    Voir tout (${subject.notes.length} notes)
+                                    Voir tout (${notes.length} notes)
                                 </button>
                             ` : ''}
                         </div>
@@ -514,15 +762,31 @@
 
         function renderNote(subjectId, note) {
             const isNumeric = typeof note.value === 'number';
-            const valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+            let valueDisplay = isNumeric ? `${note.value}/${note.max}` : note.value;
+
+            if (valueDisplay === "" && note.elementsProgramme && note.elementsProgramme.length > 0) {
+                valueDisplay = "--";
+            }
 
             const isModified = note.originalValue !== undefined;
             const isHidden = note.hidden;
 
             let details = `Coef ${note.coef} • ${new Date(note.date).toLocaleDateString('fr-FR')}`;
+            if (note.title) {
+                details += ` • ${note.title}`;
+            }
             if (isModified) {
                 details += ` (Original: ${note.originalValue}/${note.originalMax})`;
             }
+
+            const compPills = (note.elementsProgramme || []).map(val => {
+                let colorClass = '';
+                if (val === '1') colorClass = 'comp-red';
+                else if (val === '2') colorClass = 'comp-yellow';
+                else if (val === '3') colorClass = 'comp-green';
+                else if (val === '4') colorClass = 'comp-blue';
+                return `<span class="comp-pill ${colorClass}"></span>`;
+            }).join('');
 
             const isPureGhost = note.ghost && !isModified;
             const itemClass = (note.ghost || isHidden) ? 'ghost' : '';
@@ -537,7 +801,10 @@
             return `
                 <article class="note-item ${itemClass} ${ghostClass} ${hiddenClass}" data-note="${note.id}">
                     <div class="note-info ${infoClass}">
-                        <span class="note-value">${valueDisplay}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="note-value">${valueDisplay}</span>
+                            <div class="comp-pills-container">${compPills}</div>
+                        </div>
                         <span class="note-details">${details}</span>
                     </div>
                     <div class="note-actions">
@@ -554,16 +821,28 @@
 
         function toggleSubject(subjectId) {
             const notesList = document.getElementById(`notes-${subjectId}`);
-            notesList.style.display = notesList.style.display === 'none' ? 'block' : 'none';
+            const isVisible = notesList.style.display === 'block';
+            notesList.style.display = isVisible ? 'none' : 'block';
+
+            const btn = document.querySelector(`.subject-card[data-subject="${subjectId}"] .subject-header`);
+            if (btn) {
+                btn.setAttribute('aria-expanded', !isVisible);
+            }
             hapticFeedback();
         }
 
         function showAllNotes(subjectId) {
             const subject = data.subjects.find(s => s.id === subjectId);
             if (!subject) return;
+
+            const currentPeriod = data.calculation.period;
+            let notes = subject.notes;
+            if (currentPeriod && currentPeriod !== 'all') {
+                notes = subject.notes.filter(n => n.codePeriode === currentPeriod);
+            }
             
             const notesList = document.getElementById(`notes-${subjectId}`);
-            notesList.innerHTML = subject.notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
+            notesList.innerHTML = notes.slice().reverse().map(note => renderNote(subjectId, note)).join('');
         }
 
         function showLoginTip() {
@@ -585,10 +864,91 @@
 
         function updateSettingsDialog() {
             const checkbox = document.getElementById('dont-save-checkbox');
+            const input = document.getElementById('dont-save-input');
             if (isDontSaveMode) {
                 checkbox.classList.add('checked');
+                if (input) input.checked = true;
             } else {
                 checkbox.classList.remove('checked');
+                if (input) input.checked = false;
+            }
+
+            // Update radio buttons
+            document.querySelectorAll('input[name="general-mode"]').forEach(radio => {
+                radio.checked = radio.value === data.calculation.generalMode;
+            });
+            document.querySelectorAll('input[name="subject-mode"]').forEach(radio => {
+                radio.checked = radio.value === data.calculation.subjectMode;
+            });
+
+            // Update checkboxes
+            const genTrunc = document.getElementById('general-truncated-checkbox');
+            const genTruncInput = document.getElementById('general-truncated-input');
+            if (data.calculation.generalTruncated) {
+                genTrunc.classList.add('checked');
+                if (genTruncInput) genTruncInput.checked = true;
+            } else {
+                genTrunc.classList.remove('checked');
+                if (genTruncInput) genTruncInput.checked = false;
+            }
+
+            const subTrunc = document.getElementById('subject-truncated-checkbox');
+            const subTruncInput = document.getElementById('subject-truncated-input');
+            if (data.calculation.subjectTruncated) {
+                subTrunc.classList.add('checked');
+                if (subTruncInput) subTruncInput.checked = true;
+            } else {
+                subTrunc.classList.remove('checked');
+                if (subTruncInput) subTruncInput.checked = false;
+            }
+
+            // Update competencies
+            const compSelect = document.getElementById('count-competencies-select');
+            if (compSelect) {
+                compSelect.value = data.calculation.countCompetencies || 'uniquement_si_vide';
+            }
+
+            // Update periods
+            const periods = getPeriods();
+            const periodSection = document.getElementById('period-settings-section');
+            const periodSelect = document.getElementById('period-select');
+
+            if (periods.length > 1) {
+                periodSection.style.display = 'block';
+                const currentPeriod = data.calculation.period || 'all';
+
+                periodSelect.innerHTML = '<option value="all">Toutes les périodes</option>' +
+                    periods.map(p => `<option value="${p.code}">${p.name}</option>`).join('');
+
+                periodSelect.value = currentPeriod;
+            } else {
+                periodSection.style.display = 'none';
+                data.calculation.period = 'all'; // Reset if no periods
+            }
+        }
+
+        function updateAboutDialog() {
+            const officialAvg = calculateGeneralAverage(true, null, true);
+            const periods = getPeriods();
+            const latestPeriodCode = periods.length > 0 ? periods[periods.length - 1].code : 'all';
+
+            const isLatestPeriod = data.calculation.period === latestPeriodCode;
+
+            const isOfficial = data.calculation.generalMode === 'subjects' &&
+                               data.calculation.subjectMode === 'weighted' &&
+                               !data.calculation.generalTruncated &&
+                               !data.calculation.subjectTruncated &&
+                               data.calculation.countCompetencies === 'uniquement_si_vide' &&
+                               isLatestPeriod;
+
+            const disclaimer = document.getElementById('official-disclaimer');
+            const avgValEl = document.getElementById('official-avg-value');
+
+            if (!isOfficial && officialAvg !== null) {
+                disclaimer.style.display = 'block';
+                avgValEl.textContent = officialAvg.toFixed(2);
+            } else {
+                disclaimer.style.display = 'none';
             }
         }
 
@@ -599,6 +959,7 @@
             if (!profileBtn || !dropdown) return;
 
             if (isLoggedOut) {
+                profileBtn.setAttribute('aria-label', 'Se connecter');
                 showLoginTip();
                 profileBtn.innerHTML = `
                     <div class="profile-avatar" style="background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface);">
@@ -607,21 +968,25 @@
                     <span class="profile-name">Se connecter</span>
                 `;
 
+                const savedId = data.auth?.identifiant || "";
+                const savedPass = data.auth?.motdepasse || "";
+
                 dropdown.innerHTML = `
                     <div class="login-container">
                         <h2 class="dropdown-title">Connexion</h2>
                         <div class="form-group">
-                            <input type="text" class="form-input small-input" placeholder="Identifiant" aria-label="Identifiant EcoleDirecte">
+                            <input type="text" class="form-input small-input" placeholder="Identifiant" aria-label="Identifiant EcoleDirecte" value="${savedId}">
                         </div>
                         <div class="form-group">
-                            <input type="password" class="form-input small-input" placeholder="Mot de passe" aria-label="Mot de passe EcoleDirecte">
+                            <input type="password" class="form-input small-input" placeholder="Mot de passe" aria-label="Mot de passe EcoleDirecte" value="${savedPass}">
                         </div>
-                        <div class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;" role="button" aria-pressed="true" aria-label="Souvenez-vous de moi">
+                        <label class="ghost-toggle" id="remember-me-toggle" style="padding: 0; margin-bottom: 4px; cursor: pointer;">
+                            <input type="checkbox" id="remember-me-input" checked aria-label="Se souvenir de moi">
                             <div class="checkbox-m3 checked" id="remember-me-checkbox">
                                 <span class="material-symbols-rounded filled" aria-hidden="true">check</span>
                             </div>
                             <span class="ghost-toggle-label" style="font-size: 13px; cursor: pointer;">Souvenez-vous de moi</span>
-                        </div>
+                        </label>
                         <div id="remember-me-disclaimer" style="display: none; font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; margin-bottom: 4px; padding-left: 32px; line-height: 1.2;">
                             Vous pouvez désactiver cette option dans les paramètres
                         </div>
@@ -642,10 +1007,18 @@
             } else {
                 const prenom = userSession?.identity?.prenom || data.auth?.identity?.prenom || '';
                 const nom = userSession?.identity?.nom || data.auth?.identity?.nom || '';
+                const photo = userSession?.identity?.photo || data.auth?.identity?.photo;
                 const fullName = (prenom + ' ' + nom).trim();
+
+                let avatarContent = `<span class="material-symbols-rounded" aria-hidden="true">person</span>`;
+                if (photo && photo.startsWith('data:image')) {
+                    avatarContent = `<img src="${photo}" alt="Photo de profil de ${fullName}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+
+                profileBtn.setAttribute('aria-label', 'Menu profil');
                 profileBtn.innerHTML = `
                     <div class="profile-avatar">
-                        <span class="material-symbols-rounded" aria-hidden="true">person</span>
+                        ${avatarContent}
                     </div>
                     <span class="profile-name">${fullName || 'Utilisateur'}</span>
                 `;
@@ -688,9 +1061,9 @@
             if (aboutBtn) {
                 aboutBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    document.getElementById('about-dialog').classList.add('visible');
+                    updateAboutDialog();
+                    openDialog('about-dialog', document.getElementById('profile-trigger'));
                     document.getElementById('profile-dropdown').classList.remove('visible');
-                    hapticFeedback();
                 });
             }
 
@@ -699,9 +1072,8 @@
                 settingsBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     updateSettingsDialog();
-                    document.getElementById('settings-dialog').classList.add('visible');
+                    openDialog('settings-dialog', document.getElementById('profile-trigger'));
                     document.getElementById('profile-dropdown').classList.remove('visible');
-                    hapticFeedback();
                 });
             }
     
@@ -717,7 +1089,8 @@
                         accountId: null,
                         identifiant: null,
                         motdepasse: null,
-                        identity: { prenom: null, nom: null }
+                        identity: { prenom: null, nom: null },
+                        qcmAnswers: {}
                     };
                     await saveData();
                     updateProfileUI();
@@ -792,8 +1165,15 @@
                 const visibleMin = Math.min(...chartData);
                 const visibleMax = Math.max(...chartData);
         
-                evolutionChart.options.scales.y.min = Math.floor(visibleMin - 1);
-                evolutionChart.options.scales.y.max = Math.ceil(visibleMax + 1);
+                if (visibleMin === visibleMax) {
+                    evolutionChart.options.scales.y.min = Math.floor(visibleMin - 1);
+                    evolutionChart.options.scales.y.max = Math.ceil(visibleMax + 1);
+                } else {
+                    // Zoom slightly more if there's variation
+                    const range = visibleMax - visibleMin;
+                    evolutionChart.options.scales.y.min = visibleMin - (range * 0.1);
+                    evolutionChart.options.scales.y.max = visibleMax + (range * 0.1);
+                }
             } else {
                 evolutionChart.options.scales.y.min = 0;
                 evolutionChart.options.scales.y.max = 20;
@@ -841,7 +1221,10 @@
                 max,
                 coef,
                 ghost: isGhost,
-                date: new Date().toISOString()
+                date: new Date().toISOString(),
+                title: "",
+                codePeriode: "",
+                elementsProgramme: []
             };
 
             subject.notes.push(newNote);
@@ -908,7 +1291,50 @@
             const ghostCheckbox = document.getElementById('edit-ghost-checkbox');
             if (ghostCheckbox) ghostCheckbox.classList.add('checked');
 
-            document.getElementById('edit-dialog').classList.add('visible');
+            openDialog('edit-dialog');
+        }
+
+        async function removeAllGhostNotes() {
+            const db = await dbPromise;
+            const tx = db.transaction('notes', 'readwrite');
+            const notesStore = tx.objectStore('notes');
+
+            for (const subject of data.subjects) {
+                // Remove purely simulated notes
+                const notesToRemove = subject.notes.filter(n => n.id.startsWith('simu-'));
+                for (const n of notesToRemove) {
+                    await notesStore.delete(n.id);
+                }
+
+                subject.notes = subject.notes.filter(n => !n.id.startsWith('simu-'));
+
+                // Revert modified notes and unhide hidden notes
+                for (const note of subject.notes) {
+                    let changed = false;
+                    if (note.originalValue !== undefined) {
+                        note.value = note.originalValue;
+                        note.max = note.originalMax;
+                        note.coef = note.originalCoef;
+                        delete note.originalValue;
+                        delete note.originalMax;
+                        delete note.originalCoef;
+                        note.ghost = false;
+                        changed = true;
+                    }
+                    if (note.hidden) {
+                        note.hidden = false;
+                        changed = true;
+                    }
+                    if (changed) {
+                        await notesStore.put(note);
+                    }
+                }
+            }
+            await tx.done;
+            saveData();
+            updateAll();
+            showSnackbar('Notes fantômes retirées');
+            hapticFeedback();
         }
 
         async function saveEdit() {
@@ -920,17 +1346,24 @@
             const note = subject.notes.find(n => n.id === editingNote.noteId);
             if (!note) return;
             
+            const val = parseFloat(document.getElementById('edit-note-value').value);
+            const max = parseFloat(document.getElementById('edit-note-max').value) || 20;
+            const coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+
+            if (isNaN(val) || val < 0 || val > max) {
+                showSnackbar('Note invalide');
+                return;
+            }
+
             if (!note.ghost && note.originalValue === undefined) {
                 note.originalValue = note.value;
                 note.originalMax = note.max;
                 note.originalCoef = note.coef;
             }
 
-            const val = parseFloat(document.getElementById('edit-note-value').value);
-            if (!isNaN(val)) note.value = val;
-
-            note.max = parseFloat(document.getElementById('edit-note-max').value) || 20;
-            note.coef = parseFloat(document.getElementById('edit-note-coef').value) || 1;
+            note.value = val;
+            note.max = max;
+            note.coef = coef;
             note.ghost = true;
             
             const db = await dbPromise;
@@ -939,7 +1372,7 @@
             saveData();
             updateAll();
             
-            document.getElementById('edit-dialog').classList.remove('visible');
+            closeDialog('edit-dialog');
             editingNote = null;
             hapticFeedback();
             showSnackbar('Note modifiée');
@@ -953,11 +1386,11 @@
                     <div class="dialog-coef-name">
                         <span>${s.name}</span>
                     </div>
-                    <input type="number" class="dialog-coef-input" data-subject="${s.id}" value="${s.coef}" min="0.1" max="20" step="0.1">
+                    <input type="number" class="dialog-coef-input" data-subject="${s.id}" value="${s.coef}" min="0.1" max="20" step="0.1" aria-label="Coefficient pour ${s.name}">
                 </div>
             `).join('');
             
-            document.getElementById('coef-dialog').classList.add('visible');
+            openDialog('coef-dialog');
         }
 
         function saveCoefs() {
@@ -971,7 +1404,7 @@
             
             saveData();
             updateAll();
-            document.getElementById('coef-dialog').classList.remove('visible');
+            closeDialog('coef-dialog');
             hapticFeedback();
             showSnackbar('Coefficients sauvegardés');
         }
@@ -983,7 +1416,7 @@
         function initShareDialog() {
             const picker = document.getElementById('emoji-picker');
             picker.innerHTML = emojis.map(e => `
-                <button class="emoji-btn ${e === selectedEmoji ? 'selected' : ''}" data-emoji="${e}">${e}</button>
+                <button class="emoji-btn ${e === selectedEmoji ? 'selected' : ''}" data-emoji="${e}" aria-label="Sélectionner l'emoji ${e}">${e}</button>
             `).join('');
             
             picker.addEventListener('click', (e) => {
@@ -1139,16 +1572,23 @@
                 page.classList.add('hidden');
             });
             
-            document.getElementById(`page-${pageName}`).classList.remove('hidden');
+            const newPage = document.getElementById(`page-${pageName}`);
+            newPage.classList.remove('hidden');
             
+            // Move focus to the new page for accessibility
+            newPage.setAttribute('tabindex', '-1');
+            newPage.focus();
+
             document.querySelectorAll('.nav-item').forEach(item => {
                 const icon = item.querySelector('.material-symbols-rounded');
                 if (item.dataset.page === pageName) {
                     item.classList.add('active');
                     icon.classList.add('filled');
+                    item.setAttribute('aria-current', 'page');
                 } else {
                     item.classList.remove('active');
                     icon.classList.remove('filled');
+                    item.removeAttribute('aria-current');
                 }
             });
             
@@ -1175,9 +1615,6 @@
             
             const logo = document.getElementById('logo-img');
             logo.src = theme === 'dark' ? '/assets/logos/logo-b.png' : '/assets/logos/logo-n.png';
-
-            const edLogo = document.getElementById('ed-logo');
-            if(edLogo) edLogo.style.filter = theme === 'dark' ? 'invert(1)' : 'invert(0)';
             
             if (evolutionChart) {
                 setTimeout(updateChart, 100);
@@ -1190,6 +1627,35 @@
             const newTheme = data.theme === 'dark' ? 'light' : 'dark';
             applyTheme(newTheme);
             hapticFeedback();
+        }
+
+        // ==================== DIALOG FOCUS MANAGEMENT ====================
+        let lastFocusedElement = null;
+
+        function openDialog(dialogId, returnElement = null) {
+            lastFocusedElement = returnElement || document.activeElement;
+            const dialog = document.getElementById(dialogId);
+            dialog.classList.add('visible');
+
+            // Focus the first focusable element or the title
+            setTimeout(() => {
+                const title = dialog.querySelector('.dialog-title');
+                if (title) {
+                    title.setAttribute('tabindex', '-1');
+                    title.focus();
+                } else {
+                    const firstInput = dialog.querySelector('input, button, select');
+                    if (firstInput) firstInput.focus();
+                }
+            }, 100);
+            hapticFeedback();
+        }
+
+        function closeDialog(dialogId) {
+            document.getElementById(dialogId).classList.remove('visible');
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            }
         }
 
         // ==================== UTILS ====================
@@ -1225,6 +1691,26 @@
             updateSubjectSelect();
             updateSubjectsList();
             updateChart();
+
+            // Handle ghost actions visibility
+            const hasGhosts = hasGhostNotes();
+            const removeBtn = document.getElementById('remove-ghosts-btn');
+            if (removeBtn) {
+                removeBtn.style.display = hasGhosts ? 'flex' : 'none';
+            }
+
+            // Handle share buttons state
+            const shareBtn = document.getElementById('share-card-btn');
+            const pdfBtn = document.getElementById('export-pdf-btn');
+            if (shareBtn && pdfBtn) {
+                if (hasGhosts) {
+                    shareBtn.classList.add('btn-disabled');
+                    pdfBtn.classList.add('btn-disabled');
+                } else {
+                    shareBtn.classList.remove('btn-disabled');
+                    pdfBtn.classList.remove('btn-disabled');
+                }
+            }
         }
 
         async function registerPeriodicSync() {
@@ -1250,8 +1736,8 @@
         // ==================== ECOLEDIRECTE BRIDGE ====================
         async function checkAutoLogin() {
             if (data.auth && (data.auth.token || (data.auth.identifiant && data.auth.motdepasse))) {
-                isLoggedOut = false;
-                updateProfileUI();
+                // Logout on refresh: We keep isLoggedOut = true
+                // and we trigger handleEDLogin in "silent" mode to try and reconnect
                 handleEDLogin(data.auth.identifiant, data.auth.motdepasse, null, true);
             }
         }
@@ -1299,9 +1785,8 @@
             }
 
             try {
-                const response = await fetch('https://ed.api.evomoyenne.qzz.io/', {
+                const response = await fetch('https://ed.api.evosuite.qzz.io', {
                     method: 'POST',
-					mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
@@ -1317,6 +1802,7 @@
                     tempAuth = {
                         identifiant,
                         motdepasse,
+                        question: apiData.qcm.question,
                         tokens: {
                             token: apiData.token,
                             '2faToken': apiData['2faToken'],
@@ -1324,6 +1810,13 @@
                             accountId: apiData.accountId
                         }
                     };
+
+                    const rememberedAnswer = data.auth.qcmAnswers?.[apiData.qcm.question];
+                    if (rememberedAnswer && apiData.qcm.rawPropositions.includes(rememberedAnswer) && apiData.qcm.question !== handleEDLogin.lastAutoAnsweredQuestion) {
+                        handleEDLogin.lastAutoAnsweredQuestion = apiData.qcm.question;
+                        await handleEDLogin(identifiant, motdepasse, rememberedAnswer, isSilent);
+                        return;
+                    }
 
                     if (container) {
                         const buttonsHtml = apiData.qcm.propositions.map((prop, index) => `
@@ -1349,6 +1842,11 @@
                 if (apiData.status === 'SUCCESS') {
                     userSession = apiData;
                     isLoggedOut = false;
+
+                    if (qcmResponse && tempAuth.question) {
+                        data.auth.qcmAnswers[tempAuth.question] = qcmResponse;
+                    }
+                    handleEDLogin.lastAutoAnsweredQuestion = null;
                     tempAuth = {};
 
                     // Update persistent auth data
@@ -1362,7 +1860,8 @@
                     if (apiData.identity) {
                         data.auth.identity = {
                             prenom: apiData.identity.prenom || data.auth.identity.prenom,
-                            nom: apiData.identity.nom || data.auth.identity.nom
+                            nom: apiData.identity.nom || data.auth.identity.nom,
+                            photo: apiData.identity.photo || data.auth.identity.photo || null
                         };
                     }
 
@@ -1376,7 +1875,10 @@
                         const allLocalNotes = await db.getAll('notes');
                         const localRealNotes = allLocalNotes.filter(n => !n.id.startsWith('simu-'));
 
-                        const edNotes = apiData.notes.filter(edNote => (edNote.valeur || "").trim() !== "");
+                        const edNotes = apiData.notes.filter(edNote =>
+                            (edNote.valeur || "").trim() !== "" ||
+                            (edNote.elementsProgramme && edNote.elementsProgramme.some(ep => ["1", "2", "3", "4"].includes(ep.valeur)))
+                        );
                         const notesToPut = [];
                         const seenLocalIds = new Set();
 
@@ -1402,6 +1904,10 @@
                                 data.subjects.push(subject);
                             }
 
+                            const elementsProgramme = (edNote.elementsProgramme || [])
+                                .filter(ep => ep.valeur && ["1", "2", "3", "4"].includes(ep.valeur))
+                                .map(ep => ep.valeur);
+
                             const newNoteData = {
                                 id: edId,
                                 subjectId: subject.id,
@@ -1410,7 +1916,9 @@
                                 coef: coef,
                                 ghost: false,
                                 date: edNote.date || new Date().toISOString(),
-                                title: edNote.devoir || ""
+                                title: edNote.devoir || "",
+                                codePeriode: edNote.codePeriode || "",
+                                elementsProgramme: elementsProgramme
                             };
 
                             const existing = localRealNotes.find(n => n.id === edId);
@@ -1418,12 +1926,14 @@
                                 notesToPut.push(newNoteData);
                             } else {
                                 seenLocalIds.add(edId);
-                                // Compare data (value, date, title)
+                                // Compare data (value, date, title, etc)
                                 if (existing.value !== newNoteData.value ||
                                     existing.date !== newNoteData.date ||
                                     existing.title !== newNoteData.title ||
                                     existing.max !== newNoteData.max ||
-                                    existing.coef !== newNoteData.coef) {
+                                    existing.coef !== newNoteData.coef ||
+                                    existing.codePeriode !== newNoteData.codePeriode ||
+                                    JSON.stringify(existing.elementsProgramme) !== JSON.stringify(newNoteData.elementsProgramme)) {
 
                                     // Preserve local properties like 'hidden' during update
                                     const mergedNote = {
@@ -1478,6 +1988,7 @@
 
             } catch (err) {
                 console.error(err);
+                handleEDLogin.lastAutoAnsweredQuestion = null;
                 if (isSilent) {
                     if (navigator.onLine) {
                         showSnackbar('Session expirée, reconnecte-toi 👀');
@@ -1527,6 +2038,7 @@
             });
             
             document.getElementById('add-note-btn').addEventListener('click', addNote);
+            document.getElementById('remove-ghosts-btn').addEventListener('click', removeAllGhostNotes);
             
             
             document.getElementById('target-input').addEventListener('change', function() {
@@ -1538,19 +2050,19 @@
             document.getElementById('coef-dialog-btn').addEventListener('click', openCoefDialog);
             
             document.getElementById('close-coef-dialog').addEventListener('click', () => {
-                document.getElementById('coef-dialog').classList.remove('visible');
+                closeDialog('coef-dialog');
             });
             
             document.getElementById('save-coef-dialog').addEventListener('click', saveCoefs);
             
             document.getElementById('coef-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'coef-dialog') {
-                    document.getElementById('coef-dialog').classList.remove('visible');
+                    closeDialog('coef-dialog');
                 }
             });
             
             document.getElementById('close-edit-dialog').addEventListener('click', () => {
-                document.getElementById('edit-dialog').classList.remove('visible');
+                closeDialog('edit-dialog');
                 editingNote = null;
             });
             
@@ -1558,15 +2070,19 @@
             
             document.getElementById('edit-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'edit-dialog') {
-                    document.getElementById('edit-dialog').classList.remove('visible');
+                    closeDialog('edit-dialog');
                     editingNote = null;
                 }
             });
             
             document.getElementById('share-card-btn').addEventListener('click', () => {
+                if (hasGhostNotes()) {
+                    showSnackbar('Vous devez retirer vos notes fantômes pour cela.');
+                    return;
+                }
                 document.getElementById('share-form').style.display = 'block';
                 document.getElementById('share-preview').style.display = 'none';
-                document.getElementById('share-dialog').classList.add('visible');
+                openDialog('share-dialog');
             });
 
             const profileTrigger = document.getElementById('profile-trigger');
@@ -1596,9 +2112,10 @@
         
                     profileDropdown.addEventListener('click', async (e) => {
                         if (e.target.id === 'login-submit-btn') {
-                            const inputs = profileDropdown.querySelectorAll('input');
-                            const id = inputs[0].value.trim();
-                            const pass = inputs[1].value.trim();
+                            const idInput = profileDropdown.querySelector('input[placeholder="Identifiant"]');
+                            const passInput = profileDropdown.querySelector('input[placeholder="Mot de passe"]');
+                            const id = idInput?.value.trim();
+                            const pass = passInput?.value.trim();
 
                             if (!id || !pass) {
                                 showSnackbar('Il manque un truc là... 👀');
@@ -1618,9 +2135,17 @@
                         const rememberToggle = e.target.closest('#remember-me-toggle');
                         if (rememberToggle) {
                             const checkbox = rememberToggle.querySelector('.checkbox-m3');
+                            const input = document.getElementById('remember-me-input');
                             const disclaimer = document.getElementById('remember-me-disclaimer');
-                            const isChecked = checkbox.classList.toggle('checked');
-                            if (disclaimer) disclaimer.style.display = isChecked ? 'none' : 'block';
+                            // If user clicked the label or wrapper, the input might have already changed
+                            // but our custom checkbox needs sync.
+                            // Using a short delay to ensure input.checked is updated by the browser
+                            setTimeout(() => {
+                                const isChecked = input.checked;
+                                if (isChecked) checkbox.classList.add('checked');
+                                else checkbox.classList.remove('checked');
+                                if (disclaimer) disclaimer.style.display = isChecked ? 'none' : 'block';
+                            }, 0);
                             hapticFeedback();
                         }
                         const challengeBtn = e.target.closest('.challenge-btn');
@@ -1644,46 +2169,117 @@
             }
             
             document.getElementById('close-share-dialog').addEventListener('click', () => {
-                document.getElementById('share-dialog').classList.remove('visible');
+                closeDialog('share-dialog');
             });
             
             document.getElementById('generate-share-card').addEventListener('click', generateShareCard);
             
             document.getElementById('share-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'share-dialog') {
-                    document.getElementById('share-dialog').classList.remove('visible');
+                    closeDialog('share-dialog');
                 }
             });
             
-            document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+            document.getElementById('export-pdf-btn').addEventListener('click', () => {
+                if (hasGhostNotes()) {
+                    showSnackbar('Vous devez retirer vos notes fantômes pour cela.');
+                    return;
+                }
+                exportPDF();
+            });
 
             document.getElementById('close-about-dialog').addEventListener('click', () => {
-                document.getElementById('about-dialog').classList.remove('visible');
+                closeDialog('about-dialog');
             });
 
             document.getElementById('about-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'about-dialog') {
-                    document.getElementById('about-dialog').classList.remove('visible');
+                    closeDialog('about-dialog');
                 }
             });
 
             document.getElementById('close-settings-dialog').addEventListener('click', () => {
-                document.getElementById('settings-dialog').classList.remove('visible');
+                closeDialog('settings-dialog');
             });
 
             document.getElementById('settings-dialog').addEventListener('click', (e) => {
                 if (e.target.id === 'settings-dialog') {
-                    document.getElementById('settings-dialog').classList.remove('visible');
+                    closeDialog('settings-dialog');
                 }
             });
 
-            document.getElementById('dont-save-toggle').addEventListener('click', async () => {
+            document.getElementById('dont-save-toggle').addEventListener('click', async (e) => {
                 const checkbox = document.getElementById('dont-save-checkbox');
-                isDontSaveMode = checkbox.classList.toggle('checked');
-                if (isDontSaveMode) {
-                    await clearAllData();
-                    showSnackbar('Données locales supprimées');
-                }
+                const input = document.getElementById('dont-save-input');
+                // Use setTimeout to wait for input.checked to be updated
+                setTimeout(async () => {
+                    isDontSaveMode = input.checked;
+                    if (isDontSaveMode) {
+                        checkbox.classList.add('checked');
+                        await clearAllData();
+                        showSnackbar('Données locales supprimées');
+                    } else {
+                        checkbox.classList.remove('checked');
+                    }
+                }, 0);
+                hapticFeedback();
+            });
+
+            document.querySelectorAll('input[name="general-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    data.calculation.generalMode = e.target.value;
+                    saveData();
+                    updateAll();
+                    hapticFeedback();
+                });
+            });
+
+            document.querySelectorAll('input[name="subject-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    data.calculation.subjectMode = e.target.value;
+                    saveData();
+                    updateAll();
+                    hapticFeedback();
+                });
+            });
+
+            document.getElementById('general-truncated-toggle').addEventListener('click', () => {
+                const checkbox = document.getElementById('general-truncated-checkbox');
+                const input = document.getElementById('general-truncated-input');
+                setTimeout(() => {
+                    data.calculation.generalTruncated = input.checked;
+                    if (data.calculation.generalTruncated) checkbox.classList.add('checked');
+                    else checkbox.classList.remove('checked');
+                    saveData();
+                    updateAll();
+                }, 0);
+                hapticFeedback();
+            });
+
+            document.getElementById('count-competencies-select').addEventListener('change', (e) => {
+                data.calculation.countCompetencies = e.target.value;
+                saveData();
+                updateAll();
+                hapticFeedback();
+            });
+
+            document.getElementById('period-select').addEventListener('change', (e) => {
+                data.calculation.period = e.target.value;
+                saveData();
+                updateAll();
+                hapticFeedback();
+            });
+
+            document.getElementById('subject-truncated-toggle').addEventListener('click', () => {
+                const checkbox = document.getElementById('subject-truncated-checkbox');
+                const input = document.getElementById('subject-truncated-input');
+                setTimeout(() => {
+                    data.calculation.subjectTruncated = input.checked;
+                    if (data.calculation.subjectTruncated) checkbox.classList.add('checked');
+                    else checkbox.classList.remove('checked');
+                    saveData();
+                    updateAll();
+                }, 0);
                 hapticFeedback();
             });
                 
@@ -1706,21 +2302,20 @@
 
             if (versionBadge && releaseDialog) {
                 versionBadge.addEventListener('click', () => {
-                    releaseDialog.classList.add('visible');
-                    hapticFeedback();
+                    openDialog('release-notes-dialog');
                 });
             }
 
             if (releaseDialog) {
                 if (closeRelease) {
                     closeRelease.addEventListener('click', () => {
-                        releaseDialog.classList.remove('visible');
+                        closeDialog('release-notes-dialog');
                     });
                 }
 
                 releaseDialog.addEventListener('click', (e) => {
                     if (e.target === releaseDialog) {
-                        releaseDialog.classList.remove('visible');
+                        closeDialog('release-notes-dialog');
                     }
                 });
             }
