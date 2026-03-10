@@ -1812,7 +1812,7 @@
                     };
 
                     const rememberedAnswer = data.auth.qcmAnswers?.[apiData.qcm.question];
-                    if (rememberedAnswer && apiData.qcm.rawPropositions.includes(rememberedAnswer) && !handleEDLogin.lastAutoAnsweredQuestion) {
+                    if (rememberedAnswer && apiData.qcm.rawPropositions.includes(rememberedAnswer) && apiData.qcm.question !== handleEDLogin.lastAutoAnsweredQuestion) {
                         handleEDLogin.lastAutoAnsweredQuestion = apiData.qcm.question;
                         await handleEDLogin(identifiant, motdepasse, rememberedAnswer, isSilent);
                         return;
